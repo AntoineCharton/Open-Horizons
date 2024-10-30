@@ -30,8 +30,9 @@ namespace GenerativePlanet
 
     static class PlanetGeneration
     {
-        private static readonly int ElevationMinMax = Shader.PropertyToID("_elevationMinMax");
-        private static readonly int MainTexture = Shader.PropertyToID("_texture");
+        private static readonly int ElevationMinMax = Shader.PropertyToID("_ElevationMinMax");
+        private static readonly int MainTexture = Shader.PropertyToID("_MainTex");
+        private static readonly int OceanColor = Shader.PropertyToID("_BaseColor");
 
         internal static void Cleanup(this Planet planet)
         {
@@ -233,6 +234,7 @@ namespace GenerativePlanet
         internal static void UpdateElevation(this ref ColorGenerator colorGenerator, MinMax elevationMinMax)
         {
             colorGenerator.Settings.Material.SetVector(ElevationMinMax, new Vector4(elevationMinMax.Min, elevationMinMax.Max));
+            colorGenerator.Settings.Material.SetColor(OceanColor, colorGenerator.Settings.OceanColor);
         }
 
         internal static void UpdateColors(this ref ColorGenerator colorGenerator)
@@ -437,6 +439,8 @@ namespace GenerativePlanet
         [SerializeField] private Gradient planetColor;
         public Gradient PlanetColor => planetColor;
         [SerializeField] private Material material;
+        [SerializeField] private Color oceanColor;
+        public Color OceanColor => oceanColor;
 
         public Material Material
         {
