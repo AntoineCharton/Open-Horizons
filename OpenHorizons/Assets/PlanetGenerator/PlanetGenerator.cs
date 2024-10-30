@@ -2,14 +2,14 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.Serialization;
+using Object = UnityEngine.Object;
 
 namespace GenerativePlanet
 {
     [ExecuteInEditMode]
     public class PlanetGenerator : MonoBehaviour
     {
-        [FormerlySerializedAs("planetData")] [SerializeField]
+        [SerializeField]
         private Planet planet;
         
         private void OnValidate()
@@ -30,6 +30,8 @@ namespace GenerativePlanet
 
     static class PlanetGeneration
     {
+        private static readonly int ElevationMinMax = Shader.PropertyToID("_elevationMinMax");
+        private static readonly int MainTexture = Shader.PropertyToID("_texture");
 
         internal static void Cleanup(this Planet planet)
         {
@@ -37,7 +39,7 @@ namespace GenerativePlanet
             {
                 for (var i = 0; i < planet.meshFilters.Length; i++)
                 {
-                    GameObject.DestroyImmediate(planet.meshFilters[i].gameObject);
+                    Object.DestroyImmediate(planet.meshFilters[i].gameObject);
                 }
             }
         }
@@ -64,23 +66,23 @@ namespace GenerativePlanet
         
         internal static void GenerateColor(this Planet planet)
         {
-            foreach (var meshFilter in planet.MeshRenderers)
-            {
-                meshFilter.GenerateColor(planet.colorSettings);
-            }
+            planet.ColorGenerator.GenerateColor();
         }
         
-        internal static void GenerateMesh(this Planet planet)
+        internal static void GenerateMesh(this ref Planet planet)
         {
             for (var i = 0; i < planet.TerrainFaces.Length; i++)
             {
                 planet.TerrainFaces[i].ConstructMesh();
             }
+            
+            planet.ColorGenerator.UpdateElevation(planet.ShapeGenerator.ElevationMinMax);
         }
         
         internal static void Initialize(this ref Planet planet, Transform transform)
         {
             planet.ShapeGenerator = new ShapeGenerator(planet.shapeSettings);
+            planet.ColorGenerator = new ColorGenerator(planet.colorSettings);
             if (planet.meshFilters == null || planet.meshFilters.Length == 0)
             {
                 planet.meshFilters = new MeshFilter[6];
@@ -97,19 +99,19 @@ namespace GenerativePlanet
                 {
                     GameObject planetObject = new GameObject("mesh");
                     planetObject.transform.parent = transform;
-                    planetObject.AddComponent<MeshRenderer>().sharedMaterial =
-                        new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                    planetObject.AddComponent<MeshRenderer>();
                     planet.meshFilters[i] = planetObject.AddComponent<MeshFilter>();
                     planet.meshFilters[i].sharedMesh = new Mesh();
                 }
 
+                planet.MeshRenderers[i].sharedMaterial = planet.colorSettings.Material;
                 planet.TerrainFaces[i] = new TerrainFace(planet.ShapeGenerator, planet.meshFilters[i].sharedMesh, planet.Resolution, direction[i]);
             }
         }
         
-        internal static void GenerateColor(this MeshRenderer meshFilter, ColorSettings colorSettings)
+        internal static void GenerateColor(this ColorGenerator colorGenerator)
         {
-            meshFilter.sharedMaterial.color = colorSettings.PlanetColor;
+            colorGenerator.UpdateColors();
         }
         
         internal static void ConstructMesh(this TerrainFace terrainFace)
@@ -192,15 +194,15 @@ namespace GenerativePlanet
             switch (noiseFilter.NoiseSettings.Filter)
             {
                 case NoiseSettings.FilterType.Simple:
-                    return PlanetGeneration.EvaluateSimpleNoise(noiseFilter.NoiseSettings, noiseFilter.Noise, position);
+                    return EvaluateSimpleNoise(noiseFilter.NoiseSettings, noiseFilter.Noise, position);
                 case NoiseSettings.FilterType.Rigid:
-                    return PlanetGeneration.EvaluateRigidNoise(noiseFilter.NoiseSettings, noiseFilter.Noise, position);
+                    return EvaluateRigidNoise(noiseFilter.NoiseSettings, noiseFilter.Noise, position);
                 default:
                     return -100000000;
             }
         }
 
-        internal static Vector3 CalculatePointOnPlanet(this ShapeGenerator shapeGenerator, Vector3 pointOnUnitSphere)
+        internal static Vector3 CalculatePointOnPlanet(this ref ShapeGenerator shapeGenerator, Vector3 pointOnUnitSphere)
         {
             float firstLayerValue = 0;
             float elevation = 0;
@@ -223,7 +225,26 @@ namespace GenerativePlanet
                 }
             }
 
-            return pointOnUnitSphere * (shapeGenerator.Settings.PlanetRadius * (1 + elevation));
+            elevation = shapeGenerator.Settings.PlanetRadius * (1 + elevation);
+            shapeGenerator.ElevationMinMax.AddValue(elevation);
+            return pointOnUnitSphere * elevation;
+        }
+        
+        internal static void UpdateElevation(this ref ColorGenerator colorGenerator, MinMax elevationMinMax)
+        {
+            colorGenerator.Settings.Material.SetVector(ElevationMinMax, new Vector4(elevationMinMax.Min, elevationMinMax.Max));
+        }
+
+        internal static void UpdateColors(this ref ColorGenerator colorGenerator)
+        {
+            Color[] colors = new Color[colorGenerator.TextureResolution];
+            for (int i = 0; i < colorGenerator.TextureResolution; i++)
+            {
+                colors[i] = colorGenerator.Settings.PlanetColor.Evaluate(i / (colorGenerator.TextureResolution - 1f));
+            }
+            colorGenerator.Texture.SetPixels(colors);
+            colorGenerator.Texture.Apply();
+            colorGenerator.Settings.Material.SetTexture(MainTexture, colorGenerator.Texture);
         }
     }
 
@@ -237,6 +258,7 @@ namespace GenerativePlanet
         }
 
         internal ShapeGenerator ShapeGenerator;
+        internal ColorGenerator ColorGenerator;
 
         [SerializeField, HideInInspector] internal MeshFilter[] meshFilters;
         [SerializeField, HideInInspector] private MeshRenderer[] meshRenderers;
@@ -267,7 +289,7 @@ namespace GenerativePlanet
 
     struct TerrainFace
     {
-        internal readonly ShapeGenerator ShapeGenerator;
+        internal ShapeGenerator ShapeGenerator;
         internal readonly Mesh Mesh;
         internal readonly int Resolution;
         internal readonly Vector3 LocalUp;
@@ -290,6 +312,7 @@ namespace GenerativePlanet
     {
         internal ShapeSettings Settings;
         internal readonly NoiseFilter[] NoiseFilters;
+        internal MinMax ElevationMinMax;
 
         public ShapeGenerator(ShapeSettings settings)
         {
@@ -299,6 +322,8 @@ namespace GenerativePlanet
             {
                 NoiseFilters[i] = new NoiseFilter(settings.NoiseSettings[i].NoiseSettings);
             }
+
+            ElevationMinMax = new MinMax();
         }
     }
 
@@ -331,6 +356,30 @@ namespace GenerativePlanet
 
         [SerializeField] private NoiseSettings noiseSettings;
         public NoiseSettings NoiseSettings => noiseSettings;
+    }
+
+    public class MinMax
+    {
+        internal float Min { get; private set; }
+        internal float Max { get; private set; }
+
+        public MinMax()
+        {
+            Min = float.MaxValue;
+            Max = float.MinValue;
+        }
+
+        internal void AddValue(float value)
+        {
+            if (value > Max)
+            {
+                Max = value;
+            }
+            if(value < Min)
+            {
+                Min = value;
+            }
+        }
     }
 
     [Serializable]
@@ -368,11 +417,38 @@ namespace GenerativePlanet
         public float WeightMultiplier => weightMultiplier;
     }
 
+    public struct ColorGenerator
+    {
+        internal ColorSettings Settings;
+        internal Texture2D Texture;
+        internal int TextureResolution;
+
+        public ColorGenerator(ColorSettings settings)
+        {
+            Settings = settings;
+            TextureResolution = 50;
+            Texture = new Texture2D(TextureResolution, 1);
+        }
+    }
+
     [Serializable]
     public struct ColorSettings
     {
-        [SerializeField] private Color planetColor;
-        public Color PlanetColor => planetColor;
+        [SerializeField] private Gradient planetColor;
+        public Gradient PlanetColor => planetColor;
+        [SerializeField] private Material material;
+
+        public Material Material
+        {
+            get
+            {
+                if (material == null)
+                {
+                    material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                }
+                return material;
+            }
+        }
     }
 
     public struct NoiseFilter
