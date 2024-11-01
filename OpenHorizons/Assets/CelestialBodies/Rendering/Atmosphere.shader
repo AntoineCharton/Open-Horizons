@@ -2,16 +2,16 @@ Shader "Atmosphere/Atmospheric Scattering"
 {
     Properties
     {
-        _LightIntensity("Light Intensity", Float) = 30
+        _LightIntensity("Light Intensity", Float) = 100
         _LightColor("Light Color", Color) = (1,1,1)
         _LightDirection("Light Direction", Vector) = (0,0,1)
         _PlanetRadius("Planet Radius", Float) = 47
         _AtmosphereRadius("Atmosphere Radius", Float) = 50
-        _Steps ("Steps", Int) = 20
-        _LightSteps ("Light Steps", Int) = 12
-        _RayleighScattering("Rayleigh Scattering", Vector) = (0.08,0.2,0.51,0.64)
-        _MieScattering("Mie Scattering", Vector) = (0.01, 0.9, 0, 0.8)
-        _ClipThreshold ("Clip Threshold", Range(0.0,1.0)) = 0.73 
+        _Steps ("Steps", Int) = 8
+        _LightSteps ("Light Steps", Int) = 5
+        _RayleighScattering("Rayleigh Scattering", Vector) = (0.08,0.2,0.55,0.2)
+        _MieScattering("Mie Scattering", Vector) = (0.01, 0.4, 0,10)
+        _ClipThreshold ("Clip Threshold", Range(0.0,1.0)) = 0.5
     }
     SubShader
     {

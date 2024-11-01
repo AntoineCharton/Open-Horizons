@@ -2,30 +2,30 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using UnityEngine;
-using Debug = UnityEngine.Debug;
+using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
-namespace GenerativePlanet
+namespace CelestialBodies
 {
     [ExecuteInEditMode]
-    public class PlanetGenerator : MonoBehaviour
+    public class Planet : MonoBehaviour
     {
         [SerializeField]
-        private Planet planet;
+        private PlanetSettings planetSettings;
         
         private void OnValidate()
         {
-            planet.Dirty();
+            planetSettings.Dirty();
         }
 
         private void Update()
         {
-            planet.LazyUpdate(transform);
+            planetSettings.LazyUpdate(transform);
         }
 
         private void OnDestroy()
         {
-            planet.Cleanup();
+            planetSettings.Cleanup();
         }
     }
 
@@ -34,84 +34,88 @@ namespace GenerativePlanet
         private static readonly int ElevationMinMax = Shader.PropertyToID("_ElevationMinMax");
         private static readonly int MainTexture = Shader.PropertyToID("_MainTex");
         private static readonly int OceanColor = Shader.PropertyToID("_BaseColor");
+        private static readonly int PlanetRadius = Shader.PropertyToID("_PlanetRadius");
+        private static readonly int AtmosphereRadius = Shader.PropertyToID("_AtmosphereRadius");
+        private static readonly int LightColor = Shader.PropertyToID("_LightColor");
 
-        internal static void Cleanup(this Planet planet)
+        internal static void Cleanup(this PlanetSettings planetSettings)
         {
-            if (planet.meshFilters != null && !Application.isPlaying)
+            if (planetSettings.meshFilters != null && !Application.isPlaying)
             {
-                for (var i = 0; i < planet.meshFilters.Length; i++)
+                for (var i = 0; i < planetSettings.meshFilters.Length; i++)
                 {
-                    Object.DestroyImmediate(planet.meshFilters[i].gameObject);
+                    Object.DestroyImmediate(planetSettings.meshFilters[i].gameObject);
                 }
             }
         }
         
-        internal static void LazyUpdate(this ref Planet planet, Transform transform)
+        internal static void LazyUpdate(this ref PlanetSettings planetSettings, Transform transform)
         {
-            if (planet.colorSettings.Material.mainTexture == null) // When we loose serialization we want to regenerate the texture
+            if (planetSettings.terrain.Material.mainTexture == null) // When we loose serialization we want to regenerate the texture
             {
-                planet.Dirty = true;
+                planetSettings.Dirty = true;
             }
-            if (planet.Dirty)
+            if (planetSettings.Dirty)
             {
                 Stopwatch stopWatch = new Stopwatch();
                 stopWatch.Start();
-                planet.Initialize(transform);
-                planet.GenerateMesh();
-                planet.GenerateColor();
-                planet.Dirty = false;
+                planetSettings.Initialize(transform);
+                planetSettings.GenerateMesh();
+                planetSettings.GenerateColor();
+                planetSettings.ConstructAtmosphere(transform);
+                planetSettings.Dirty = false;
                 stopWatch.Stop();
                 TimeSpan ts = stopWatch.Elapsed; string elapsedTime = $"{ts.Hours:00}:{ts.Minutes:00}:{ts.Seconds:00}.{ts.Milliseconds / 10:00}"; UnityEngine.Debug.Log("RunTime " + elapsedTime);
             }
         }
         
-        internal static void Dirty(this ref Planet planet)
+        internal static void Dirty(this ref PlanetSettings planetSettings)
         {
-            planet.Dirty = true;
+            planetSettings.Dirty = true;
         }
         
-        internal static void GenerateColor(this Planet planet)
+        internal static void GenerateColor(this PlanetSettings planetSettings)
         {
-            planet.ColorGenerator.GenerateColor();
+            planetSettings.ColorGenerator.GenerateColor();
         }
         
-        internal static void GenerateMesh(this ref Planet planet)
+        internal static void GenerateMesh(this ref PlanetSettings planetSettings)
         {
-            for (var i = 0; i < planet.TerrainFaces.Length; i++)
+            for (var i = 0; i < planetSettings.TerrainFaces.Length; i++)
             {
-                planet.TerrainFaces[i].ConstructMesh();
+                planetSettings.TerrainFaces[i].ConstructPlanet();
             }
             
-            planet.ColorGenerator.UpdateElevation(planet.ShapeGenerator.ElevationMinMax);
+            planetSettings.ColorGenerator.UpdateElevation(planetSettings.ShapeGenerator.ElevationMinMax);
         }
         
-        internal static void Initialize(this ref Planet planet, Transform transform)
+        internal static void Initialize(this ref PlanetSettings planetSettings, Transform transform)
         {
-            planet.ShapeGenerator = new ShapeGenerator(planet.shapeSettings);
-            planet.ColorGenerator = new ColorGenerator(planet.colorSettings);
-            if (planet.meshFilters == null || planet.meshFilters.Length == 0)
+            planetSettings.ShapeGenerator = new ShapeGenerator(planetSettings.shape);
+            planetSettings.ColorGenerator = new ColorGenerator(planetSettings.terrain);
+            if (planetSettings.meshFilters == null || planetSettings.meshFilters.Length == 0)
             {
-                planet.meshFilters = new MeshFilter[6];
+                planetSettings.meshFilters = new MeshFilter[6];
             }
 
-            planet.TerrainFaces = new TerrainFace[6];
+            planetSettings.TerrainFaces = new TerrainFace[6];
 
             Vector3[] direction =
                 { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
 
             for (int i = 0; i < 6; i++)
             {
-                if (planet.meshFilters[i] == null)
+                if (planetSettings.meshFilters[i] == null)
                 {
                     GameObject planetObject = new GameObject("mesh");
                     planetObject.transform.parent = transform;
                     planetObject.AddComponent<MeshRenderer>();
-                    planet.meshFilters[i] = planetObject.AddComponent<MeshFilter>();
-                    planet.meshFilters[i].sharedMesh = new Mesh();
+                    planetSettings.meshFilters[i] = planetObject.AddComponent<MeshFilter>();
+                    planetSettings.meshFilters[i].sharedMesh = new Mesh();
                 }
 
-                planet.MeshRenderers[i].sharedMaterial = planet.colorSettings.Material;
-                planet.TerrainFaces[i] = new TerrainFace(planet.ShapeGenerator, planet.meshFilters[i].sharedMesh, planet.Resolution, direction[i]);
+                planetSettings.MeshRenderers[i].sharedMaterial = planetSettings.terrain.Material;
+                planetSettings.TerrainFaces[i] = new TerrainFace(planetSettings.ShapeGenerator, planetSettings.meshFilters[i].sharedMesh, planetSettings.Resolution, direction[i]);
             }
         }
         
@@ -120,7 +124,7 @@ namespace GenerativePlanet
             colorGenerator.UpdateColors();
         }
         
-        internal static void ConstructMesh(this TerrainFace terrainFace)
+        internal static void ConstructPlanet(this TerrainFace terrainFace)
         {
             Vector3[] vertices = new Vector3[terrainFace.Resolution * terrainFace.Resolution];
             int[] triangles = new int[(terrainFace.Resolution - 1) * (terrainFace.Resolution - 1) * 6];
@@ -154,6 +158,54 @@ namespace GenerativePlanet
             terrainFace.Mesh.vertices = vertices;
             terrainFace.Mesh.triangles = triangles;
             terrainFace.Mesh.RecalculateNormals();
+        }
+
+        internal static void ConstructAtmosphere(this ref PlanetSettings planetSettings, Transform parent)
+        {
+            if (!planetSettings.atmosphere.HasAtmosphere)
+            {
+                if (planetSettings.atmosphereMeshFilter != null)
+                    Object.DestroyImmediate(planetSettings.atmosphereMeshFilter.gameObject);
+                
+                planetSettings.atmosphereMaterial = null;
+                return;
+            }
+            
+            if (planetSettings.atmosphereMeshRenderer == null)
+            {
+                GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                sphere.transform.parent = parent;
+                planetSettings.atmosphereMeshFilter = sphere.GetComponent<MeshFilter>();
+                planetSettings.atmosphereMeshRenderer = sphere.GetComponent<MeshRenderer>();
+                
+            }
+            
+            if (planetSettings.atmosphereMaterial == null)
+            {
+                var material = new Material(Shader.Find("Atmosphere/Atmospheric Scattering"));
+                planetSettings.atmosphereMeshRenderer.material = material;
+                planetSettings.atmosphereMaterial = material;
+            }
+
+            var sharedMesh = planetSettings.atmosphereMeshFilter.sharedMesh;
+            var vertices = sharedMesh.vertices;
+            var triangles = sharedMesh.triangles;
+            var mesh = sharedMesh;
+            
+            for (var i = 0; i < vertices.Length; i++)
+            {
+                vertices[i] = Vector3.Normalize(vertices[i]);
+                vertices[i] *= (planetSettings.shape.Radius + planetSettings.atmosphere.Size);
+            }
+            planetSettings.atmosphereMaterial.SetFloat(PlanetRadius, planetSettings.shape.Radius);
+            planetSettings.atmosphereMaterial.SetFloat(AtmosphereRadius, planetSettings.shape.Radius + planetSettings.atmosphere.Size);
+            planetSettings.atmosphereMaterial.SetColor(LightColor, planetSettings.atmosphere.Color);
+           
+            
+            mesh.Clear();
+            mesh.vertices = vertices;
+            mesh.triangles = triangles;
+            mesh.RecalculateNormals();
         }
 
         internal static float EvaluateRigidNoise(this NoiseSettings noiseSettings, Noise noise, Vector3 point)
@@ -231,7 +283,7 @@ namespace GenerativePlanet
                 }
             }
 
-            elevation = shapeGenerator.Settings.PlanetRadius * (1 + elevation);
+            elevation = shapeGenerator.Settings.Radius * (1 + elevation);
             shapeGenerator.ElevationMinMax.AddValue(elevation);
             return pointOnUnitSphere * elevation;
         }
@@ -247,7 +299,7 @@ namespace GenerativePlanet
             Color[] colors = new Color[colorGenerator.TextureResolution];
             for (int i = 0; i < colorGenerator.TextureResolution; i++)
             {
-                colors[i] = colorGenerator.Settings.PlanetColor.Evaluate(i / (colorGenerator.TextureResolution - 1f));
+                colors[i] = colorGenerator.Settings.Color.Evaluate(i / (colorGenerator.TextureResolution - 1f));
             }
             colorGenerator.Texture.SetPixels(colors);
             colorGenerator.Texture.Apply();
@@ -256,19 +308,22 @@ namespace GenerativePlanet
     }
 
     [Serializable]
-    struct Planet
+    struct PlanetSettings
     {
-        [SerializeField, Range(3, 256)] private int resolution;
+        [SerializeField, Range(3, 1024)] private int resolution;
         public int Resolution
         {
             get { return Mathf.Max(resolution, 3); }
         }
-
+        
         internal ShapeGenerator ShapeGenerator;
         internal ColorGenerator ColorGenerator;
 
         [SerializeField, HideInInspector] internal MeshFilter[] meshFilters;
         [SerializeField, HideInInspector] private MeshRenderer[] meshRenderers;
+        [SerializeField, HideInInspector] internal MeshFilter atmosphereMeshFilter;
+        [SerializeField, HideInInspector] internal MeshRenderer atmosphereMeshRenderer;
+        [SerializeField, HideInInspector] internal Material atmosphereMaterial;
 
         public MeshRenderer[] MeshRenderers
         {
@@ -286,8 +341,9 @@ namespace GenerativePlanet
                 return meshRenderers;
             }
         }
-        [SerializeField] internal ColorSettings colorSettings;
-        [SerializeField] internal ShapeSettings shapeSettings;
+        [SerializeField] internal Terrain terrain;
+        [SerializeField] internal Shape shape;
+        [SerializeField] internal Atmosphere atmosphere;
 
         internal TerrainFace[] TerrainFaces;
 
@@ -307,6 +363,7 @@ namespace GenerativePlanet
         {
             ShapeGenerator = shapeGenerator;
             Mesh = mesh;
+            Mesh.indexFormat = IndexFormat.UInt32;
             Resolution = resolution;
             LocalUp = localUp;
             AxisA = new Vector3(localUp.y, localUp.z, localUp.x);
@@ -317,11 +374,11 @@ namespace GenerativePlanet
 
     public struct ShapeGenerator
     {
-        internal ShapeSettings Settings;
+        internal Shape Settings;
         internal readonly NoiseFilter[] NoiseFilters;
         internal MinMax ElevationMinMax;
 
-        public ShapeGenerator(ShapeSettings settings)
+        public ShapeGenerator(Shape settings)
         {
             Settings = settings;
             NoiseFilters = new NoiseFilter[settings.NoiseSettings.Length];
@@ -335,10 +392,10 @@ namespace GenerativePlanet
     }
 
     [Serializable]
-    public struct ShapeSettings
+    public struct Shape
     {
-        [SerializeField] private float planetRadius;
-        public float PlanetRadius => planetRadius;
+        [SerializeField] private float radius;
+        public float Radius => radius;
         [SerializeField] private NoiseLayer[] noiseSettings;
 
         public NoiseLayer[] NoiseSettings
@@ -423,14 +480,25 @@ namespace GenerativePlanet
         [SerializeField] private float weightMultiplier;
         public float WeightMultiplier => weightMultiplier;
     }
-
+    
+    [Serializable]
+    public struct Atmosphere
+    {
+        [SerializeField] private bool hasAtmosphere;
+        public bool HasAtmosphere => hasAtmosphere;
+        [SerializeField] private float size;
+        public float Size => size;
+        [SerializeField] private Color color;
+        public Color Color => color;
+    }
+    
     public struct ColorGenerator
     {
-        internal ColorSettings Settings;
+        internal Terrain Settings;
         internal Texture2D Texture;
         internal int TextureResolution;
 
-        public ColorGenerator(ColorSettings settings)
+        public ColorGenerator(Terrain settings)
         {
             Settings = settings;
             TextureResolution = 50;
@@ -439,11 +507,11 @@ namespace GenerativePlanet
     }
 
     [Serializable]
-    public struct ColorSettings
+    public struct Terrain
     {
-        [SerializeField] private Gradient planetColor;
-        public Gradient PlanetColor => planetColor;
-        [SerializeField] private Material material;
+        [SerializeField] private Gradient color;
+        public Gradient Color => color;
+        [SerializeField, HideInInspector] private Material material;
         [SerializeField] private Color oceanColor;
         public Color OceanColor => oceanColor;
 
@@ -453,7 +521,7 @@ namespace GenerativePlanet
             {
                 if (material == null)
                 {
-                    material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                    material = new Material(Shader.Find("Shader Graphs/Planet"));
                 }
                 return material;
             }
