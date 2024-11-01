@@ -180,3 +180,5 @@ Shader "Atmosphere/Atmospheric Scattering"
         }
     }
 }
+
+//Fork of https://gist.github.com/T5impact/9edc753a048ea90c7a2bdbaa5c1255d8
