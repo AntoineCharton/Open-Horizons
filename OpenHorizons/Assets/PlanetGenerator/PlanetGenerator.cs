@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
 namespace GenerativePlanet
@@ -47,6 +48,10 @@ namespace GenerativePlanet
         
         internal static void LazyUpdate(this ref Planet planet, Transform transform)
         {
+            if (planet.colorSettings.Material.mainTexture == null) // When we loose serialization we want to regenerate the texture
+            {
+                planet.Dirty = true;
+            }
             if (planet.Dirty)
             {
                 Stopwatch stopWatch = new Stopwatch();
