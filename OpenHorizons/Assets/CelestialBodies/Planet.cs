@@ -103,6 +103,23 @@ namespace CelestialBodies
             Vector3[] direction =
                 { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
 
+            var initialPosition = transform.position;
+            var initialRotation = transform.rotation;
+            transform.position = Vector3.zero;
+            transform.rotation = Quaternion.identity;
+            planetSettings.LazyMeshInitialization(transform);
+            transform.position = initialPosition;
+            transform.rotation = initialRotation;
+
+            for (int i = 0; i < 6; i++)
+            {
+                planetSettings.MeshRenderers[i].sharedMaterial = planetSettings.terrain.Material;
+                planetSettings.TerrainFaces[i] = new TerrainFace(planetSettings.ShapeGenerator, planetSettings.meshFilters[i].sharedMesh, planetSettings.Resolution, direction[i]);
+            }
+        }
+
+        internal static void LazyMeshInitialization(this PlanetSettings planetSettings, Transform transform)
+        {
             for (int i = 0; i < 6; i++)
             {
                 if (planetSettings.meshFilters[i] == null)
@@ -113,9 +130,6 @@ namespace CelestialBodies
                     planetSettings.meshFilters[i] = planetObject.AddComponent<MeshFilter>();
                     planetSettings.meshFilters[i].sharedMesh = new Mesh();
                 }
-
-                planetSettings.MeshRenderers[i].sharedMaterial = planetSettings.terrain.Material;
-                planetSettings.TerrainFaces[i] = new TerrainFace(planetSettings.ShapeGenerator, planetSettings.meshFilters[i].sharedMesh, planetSettings.Resolution, direction[i]);
             }
         }
         
@@ -319,8 +333,8 @@ namespace CelestialBodies
         internal ShapeGenerator ShapeGenerator;
         internal ColorGenerator ColorGenerator;
 
-        [SerializeField, HideInInspector] internal MeshFilter[] meshFilters;
-        [SerializeField, HideInInspector] private MeshRenderer[] meshRenderers;
+        [SerializeField] internal MeshFilter[] meshFilters;
+        [SerializeField] private MeshRenderer[] meshRenderers;
         [SerializeField, HideInInspector] internal MeshFilter atmosphereMeshFilter;
         [SerializeField, HideInInspector] internal MeshRenderer atmosphereMeshRenderer;
         [SerializeField, HideInInspector] internal Material atmosphereMaterial;
@@ -510,7 +524,16 @@ namespace CelestialBodies
     public struct Terrain
     {
         [SerializeField] private Gradient color;
-        public Gradient Color => color;
+        public Gradient Color
+        {
+            get
+            {
+                if (color == null)
+                    color = new Gradient();
+                return color;
+            }
+        }
+
         [SerializeField, HideInInspector] private Material material;
         [SerializeField] private Color oceanColor;
         public Color OceanColor => oceanColor;
