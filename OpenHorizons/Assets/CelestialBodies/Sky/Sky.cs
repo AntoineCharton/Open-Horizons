@@ -4,7 +4,7 @@ using Object = UnityEngine.Object;
 
 namespace CelestialBodies.Sky
 {
-    static class PlanetGeneration
+    static class SkyBuilder
     {
         private static readonly int BakedOpticalDepth = Shader.PropertyToID("_BakedOpticalDepth");
         private static readonly int PlanetCenter = Shader.PropertyToID("_PlanetCenter");

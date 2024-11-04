@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 
 namespace CelestialBodies.Terrain
 {
-    public static class SurfaceGeneration
+    public static class SurfaceBuilder
     {
         
         private static readonly int ElevationMinMax = Shader.PropertyToID("_ElevationMinMax");
