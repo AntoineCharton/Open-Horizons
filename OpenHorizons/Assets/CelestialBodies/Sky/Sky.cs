@@ -73,7 +73,7 @@ namespace CelestialBodies.Sky
                 return;
             }
 
-            atmosphereGenerator.planetRadius = radius;
+            atmosphereGenerator.planetRadius = radius + atmosphereGenerator.radiusOffset;
             atmosphereGenerator.oceanRadius = 1;
             atmosphereGenerator.atmosphere.SetProperties(atmosphereGenerator.material);
             atmosphereGenerator.ValidateOpticalDepth();
@@ -135,10 +135,13 @@ namespace CelestialBodies.Sky
         [SerializeField] internal Atmosphere atmosphere;
         [SerializeField] internal Transform sun;
         [SerializeField] internal bool directional;
+        [SerializeField] internal float radiusOffset;
 
         [SerializeField, Min(1f), HideInInspector] internal float planetRadius;
         [SerializeField, Min(1f), HideInInspector] internal float oceanRadius;
         [SerializeField, Min(0.025f)] internal float atmosphereScale;
+
+        
 
         public float AtmosphereSize => (1 + atmosphereScale) * planetRadius;
 

@@ -14,7 +14,12 @@ namespace CelestialBodies.Terrain
         private static readonly int ElevationMinMax = Shader.PropertyToID("_ElevationMinMax");
         private static readonly int MainTexture = Shader.PropertyToID("_MainTex");
         private static readonly int OceanColor = Shader.PropertyToID("_BaseColor");
-        
+        private static readonly int GroundTex = Shader.PropertyToID("_GroundTex");
+        private static readonly int GroundTexBlend = Shader.PropertyToID("_GroundTexBlend");
+        private static readonly int GroundNorm = Shader.PropertyToID("_GroundNorm");
+        private static readonly int WaterNorm = Shader.PropertyToID("_WaterNorm");
+        private static readonly int GroundSmooth = Shader.PropertyToID("_GroundSmooth");
+
         internal static void Cleanup(this Surface surface)
         {
             if (surface.meshFilters != null && !Application.isPlaying)
@@ -235,6 +240,7 @@ namespace CelestialBodies.Terrain
         {
             colorGenerator.Settings.Material.SetVector(ElevationMinMax, new Vector4(elevationMinMax.Min, elevationMinMax.Max));
             colorGenerator.Settings.Material.SetColor(OceanColor, colorGenerator.Settings.OceanColor);
+            colorGenerator.Settings.Material.SetTexture(WaterNorm, colorGenerator.Settings.OceanNormals);
         }
 
         internal static void UpdateColors(this ref ColorGenerator colorGenerator)
@@ -242,11 +248,15 @@ namespace CelestialBodies.Terrain
             Color[] colors = new Color[colorGenerator.TextureResolution];
             for (int i = 0; i < colorGenerator.TextureResolution; i++)
             {
-                colors[i] = colorGenerator.Settings.Color.Evaluate(i / (colorGenerator.TextureResolution - 1f));
+                colors[i] = colorGenerator.Settings.Tint.Evaluate(i / (colorGenerator.TextureResolution - 1f));
             }
-            colorGenerator.Texture.SetPixels(colors);
-            colorGenerator.Texture.Apply();
-            colorGenerator.Settings.Material.SetTexture(MainTexture, colorGenerator.Texture);
+            colorGenerator.TintTexture.SetPixels(colors);
+            colorGenerator.TintTexture.Apply();
+            colorGenerator.Settings.Material.SetTexture(MainTexture, colorGenerator.TintTexture);
+            colorGenerator.Settings.Material.SetTexture(GroundTex, colorGenerator.GroundTexture);
+            colorGenerator.Settings.Material.SetTexture(GroundNorm, colorGenerator.GroundTextureNormals);
+            colorGenerator.Settings.Material.SetFloat(GroundTexBlend, colorGenerator.GroundTextureBlend);
+            colorGenerator.Settings.Material.SetFloat(GroundSmooth, colorGenerator.GroundSmooth);
         }
     }
     
@@ -427,22 +437,51 @@ namespace CelestialBodies.Terrain
     [Serializable]
     public struct Terrain
     {
-        [SerializeField] private Gradient color;
+        [SerializeField] private Gradient tint;
 
-        public Gradient Color
+        public Gradient Tint
         {
             get
             {
-                if (color == null)
-                    color = new Gradient();
-                return color;
+                if (tint == null)
+                    tint = new Gradient();
+                return tint;
             }
+        }
+
+        [SerializeField] private Texture2D texture;
+        public Texture2D Texture
+        {
+            get => texture;
+        }
+        
+        [SerializeField] private Texture2D textureNormal;
+        public Texture2D TextureNormal
+        {
+            get => textureNormal;
+        }
+        
+        [SerializeField] private float groundSmooth;
+        public float GroundSmooth
+        {
+            get => groundSmooth;
+        }
+        
+        [SerializeField] private float textureBlend;
+        public float TextureBlend
+        {
+            get => textureBlend;
         }
 
         [SerializeField, HideInInspector] private Material material;
         [SerializeField] private Color oceanColor;
         public Color OceanColor => oceanColor;
-
+        
+        [SerializeField] private Texture2D oceanNormals;
+        public Texture2D OceanNormals => oceanNormals;
+        
+        
+        
         public Material Material
         {
             get
@@ -473,14 +512,22 @@ namespace CelestialBodies.Terrain
     public struct ColorGenerator
     {
         internal Terrain Settings;
-        internal Texture2D Texture;
+        internal Texture2D TintTexture;
         internal int TextureResolution;
+        internal Texture2D GroundTexture;
+        internal float GroundTextureBlend;
+        internal float GroundSmooth;
+        internal Texture2D GroundTextureNormals;
 
         public ColorGenerator(Terrain settings)
         {
             Settings = settings;
             TextureResolution = 50;
-            Texture = new Texture2D(TextureResolution, 1);
+            TintTexture = new Texture2D(TextureResolution, 1);
+            GroundTexture = settings.Texture;
+            GroundTextureBlend = settings.TextureBlend;
+            GroundTextureNormals = settings.TextureNormal;
+            GroundSmooth = settings.GroundSmooth;
         }
     }
 }
