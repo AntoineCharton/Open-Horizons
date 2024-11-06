@@ -9,10 +9,12 @@ namespace CelestialBodies
     {
         [SerializeField] private Surface surface;
         [SerializeField] internal AtmosphereGenerator sky;
+        [SerializeField] private Cloud cloud;
 
         private void OnEnable()
         {
             AtmosphereRenderPass.RegisterEffect(this);
+            VolumetricCloudsURP.VolumetricCloudsPass.RegisterPlanet(transform);
         }
 
         private void OnValidate()
