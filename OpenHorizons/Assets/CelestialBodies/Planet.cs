@@ -1,3 +1,4 @@
+using CelestialBodies.Clouds.Rendering;
 using CelestialBodies.Terrain;
 using CelestialBodies.Sky;
 using UnityEngine;
@@ -14,7 +15,7 @@ namespace CelestialBodies
         private void OnEnable()
         {
             AtmosphereRenderPass.RegisterEffect(this);
-            VolumetricCloudsURP.VolumetricCloudsPass.RegisterPlanet(transform);
+            VolumetricCloudsUrp.VolumetricCloudsPass.RegisterPlanet(transform);
         }
 
         private void OnValidate()
@@ -24,6 +25,7 @@ namespace CelestialBodies
 
         private void Update()
         {
+            VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud);
             surface.LazyUpdate(transform);
         }
 

@@ -13,135 +13,7 @@ MonoBehaviour:
   m_Name: VolumetricClouds
   m_EditorClassIdentifier: 
   active: 1
-  state:
-    m_OverrideState: 1
-    m_Value: 1
-  localClouds:
-    m_OverrideState: 1
-    m_Value: 1
-  m_CloudPreset:
-    m_OverrideState: 1
-    m_Value: 4
-  densityMultiplier:
-    m_OverrideState: 1
-    m_Value: 0.436
-  densityCurve:
-    m_OverrideState: 0
-    m_Value:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 34
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 1
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 34
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-  shapeFactor:
-    m_OverrideState: 1
-    m_Value: 0.875
-  shapeScale:
-    m_OverrideState: 1
-    m_Value: 14
-  erosionFactor:
-    m_OverrideState: 1
-    m_Value: 0.076
-  erosionScale:
-    m_OverrideState: 1
-    m_Value: 75
-  erosionCurve:
-    m_OverrideState: 0
-    m_Value:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 34
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 1
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 34
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-  ambientOcclusionCurve:
-    m_OverrideState: 0
-    m_Value:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 34
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 1
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 34
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-  microErosion:
-    m_OverrideState: 1
-    m_Value: 1
-  microErosionFactor:
-    m_OverrideState: 1
-    m_Value: 0.65
-  microErosionScale:
-    m_OverrideState: 1
-    m_Value: 100
-  bottomAltitude:
-    m_OverrideState: 1
-    m_Value: 550
-  altitudeRange:
-    m_OverrideState: 1
-    m_Value: 300
-  shapeOffset:
-    m_OverrideState: 1
-    m_Value: {x: 0, y: 0, z: 0}
-  earthCurvature:
-    m_OverrideState: 0
-    m_Value: 0
-  globalSpeed:
-    m_OverrideState: 1
-    m_Value: 100
-  globalOrientation:
-    m_OverrideState: 1
-    m_Value: 145
+  <displayName>k__BackingField: 
   shapeSpeedMultiplier:
     m_OverrideState: 0
     m_Value: 1
@@ -154,42 +26,15 @@ MonoBehaviour:
   verticalShapeWindSpeed:
     m_OverrideState: 0
     m_Value: 0
-  verticalErosionWindSpeed:
-    m_OverrideState: 0
-    m_Value: 0
-  ambientLightProbeDimmer:
-    m_OverrideState: 0
-    m_Value: 1
-  sunLightDimmer:
-    m_OverrideState: 0
-    m_Value: 1
   erosionOcclusion:
     m_OverrideState: 0
     m_Value: 0.1
-  scatteringTint:
-    m_OverrideState: 1
-    m_Value: {r: 0.5083263, g: 0.590908, b: 0.8930817, a: 1}
   powderEffectIntensity:
     m_OverrideState: 0
     m_Value: 0.25
   multiScattering:
     m_OverrideState: 0
     m_Value: 0.5
-  shadows:
-    m_OverrideState: 1
-    m_Value: 1
-  shadowResolution:
-    m_OverrideState: 1
-    m_Value: 1024
-  shadowDistance:
-    m_OverrideState: 0
-    m_Value: 8000
-  shadowOpacity:
-    m_OverrideState: 0
-    m_Value: 1
-  shadowOpacityFallback:
-    m_OverrideState: 0
-    m_Value: 0
   temporalAccumulationFactor:
     m_OverrideState: 0
     m_Value: 0.95
@@ -272,4 +117,3 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   components:
   - {fileID: -1856774020679575072}
-  - {fileID: -6185341409966880922}
