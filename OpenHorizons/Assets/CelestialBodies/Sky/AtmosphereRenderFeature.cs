@@ -29,68 +29,43 @@ namespace CelestialBodies.Sky
         }
 
 
-        private static readonly List<IAtmosphereEffect> currentActiveEffects = new();
+        private static IAtmosphereEffect currentActiveEffect;
 
 
         public static void RegisterEffect(IAtmosphereEffect effect)
         {
-            if (!currentActiveEffects.Contains(effect))
-            {
-                currentActiveEffects.Add(effect);
-            }
+            currentActiveEffect = effect;
         }
 
 
         public static void RemoveEffect(IAtmosphereEffect effect)
         {
-            currentActiveEffects.Remove(effect);
+            currentActiveEffect = null;
         }
 
 
-        private readonly List<SortedEffect> visibleEffects = new();
+        private SortedEffect visibleEffects;
 
         private Plane[] cameraPlanes;
 
 
         private void CullAndSortEffects(Camera camera)
         {
-            visibleEffects.Clear();
-
+            if(currentActiveEffect == null)
+                return;
             // Perform culling of active effects
             cameraPlanes = GeometryUtility.CalculateFrustumPlanes(camera);
 
             Vector3 viewPos = camera.transform.position;
-            for (int i = currentActiveEffects.Count - 1; i >= 0; i--)
+            if (currentActiveEffect.IsVisible(cameraPlanes))
             {
-                if (currentActiveEffects[i] == null)
-                {
-                    currentActiveEffects.RemoveAt(i);
-                    continue;
-                }
+                float dstToSurface = currentActiveEffect.DistToAtmosphere(viewPos);
 
-                if (currentActiveEffects[i].IsVisible(cameraPlanes))
+                visibleEffects = new SortedEffect
                 {
-                    float dstToSurface = currentActiveEffects[i].DistToAtmosphere(viewPos);
-
-                    visibleEffects.Add(new SortedEffect
-                    {
-                        effect = currentActiveEffects[i],
-                        distanceToEffect = dstToSurface
-                    });
-                }
-            }
-
-            // Sort effects from far to near
-            for (int i = 0; i < visibleEffects.Count - 1; i++)
-            {
-                for (int j = i + 1; j > 0; j--)
-                {
-                    if (visibleEffects[j - 1].distanceToEffect < visibleEffects[j].distanceToEffect)
-                    {
-                        // Swap elements
-                        (visibleEffects[j], visibleEffects[j - 1]) = (visibleEffects[j - 1], visibleEffects[j]);
-                    }
-                }
+                    effect = currentActiveEffect,
+                    distanceToEffect = dstToSurface
+                };
             }
         }
 
@@ -105,6 +80,8 @@ namespace CelestialBodies.Sky
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
+            if(currentActiveEffect == null)
+                return;
             CommandBuffer cmd = CommandBufferPool.Get("Atmosphere Effects");
             cmd.Clear();
 
@@ -141,19 +118,11 @@ namespace CelestialBodies.Sky
         {
             BlitUtility.BeginBlitLoop(cmd, colorSource);
 
-            // Visible effect render loop
-            for (int i = 0; i < visibleEffects.Count; i++)
-            {
 #if UNITY_EDITOR
-                PrefabStage stage = PrefabStageUtility.GetPrefabStage(visibleEffects[i].effect.GameObject);
-                if (stage == null && inPrefabMode)
-                {
-                    continue;
-                }
+            PrefabStage stage = PrefabStageUtility.GetPrefabStage(visibleEffects.effect.GameObject);
 #endif
-                Material blitMat = visibleEffects[i].effect.GetMaterial(atmosphereShader);
-                BlitUtility.BlitNext(blitMat, "_Source");
-            }
+            Material blitMat = visibleEffects.effect.GetMaterial(atmosphereShader);
+            BlitUtility.BlitNext(blitMat, "_Source");
 
             // Blit to camera target
             BlitUtility.EndBlitLoop(colorSource);
@@ -184,6 +153,8 @@ namespace CelestialBodies.Sky
         /// Returns absolute distance from point to atmosphere shell
         /// </summary>
         public float DistToAtmosphere(Vector3 pos);
+
+        public bool IsActive();
 
         public GameObject GameObject { get; }
     }

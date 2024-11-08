@@ -14,12 +14,19 @@ namespace CelestialBodies
 
         private void OnEnable()
         {
-            AtmosphereRenderPass.RegisterEffect(this);
+            if (sky.atmosphere.Enabled)
+                AtmosphereRenderPass.RegisterEffect(this);
+            else 
+                AtmosphereRenderPass.RemoveEffect(this);
             VolumetricCloudsUrp.VolumetricCloudsPass.RegisterPlanet(transform);
         }
 
         private void OnValidate()
         {
+            if (sky.atmosphere.Enabled)
+                AtmosphereRenderPass.RegisterEffect(this);
+            else 
+                AtmosphereRenderPass.RemoveEffect(this);
             surface.Dirty();
         }
 
@@ -57,6 +64,11 @@ namespace CelestialBodies
         public float DistToAtmosphere(Vector3 pos)
         {
             return sky.DistToAtmosphere(transform, pos);
+        }
+
+        public bool IsActive()
+        {
+            return sky.atmosphere.Enabled;
         }
 
         public GameObject GameObject

@@ -263,6 +263,8 @@ namespace CelestialBodies.Clouds.Rendering
 #endif
                 return;
             }
+
+            bool isActive = VolumetricCloudsPass.Cloud.Enabled;
             
             bool isDebugger = DebugManager.instance.isAnyDebugUIActive;
 

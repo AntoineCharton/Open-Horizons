@@ -5,8 +5,6 @@ using UnityEngine;
 public class RescalledTransform : MonoBehaviour
 {
     public doubleVector3 position;
-    public Quaternion rotation;
-    public doubleVector3 scale;
     [SerializeField] private ReferenceTransform referenceTransform;
 
     private void LateUpdate()

@@ -186,7 +186,7 @@ namespace CelestialBodies.Sky
         }
 
 
-        [System.Serializable]
+        [Serializable]
         public struct ScatterWavelengths
         {
             public float red;
@@ -203,15 +203,15 @@ namespace CelestialBodies.Sky
                 Mathf.Pow(blue, 4)
             ) * power;
         }
-
-
+        
+        [SerializeField] private bool enabled;
+        public bool Enabled => enabled;
+        
         public TextureSizes textureSize;
         [SerializeField] private ComputeShader opticalDepthCompute;
         [SerializeField, Range(1, 30)] private int opticalDepthPoints;
-
         public ComputeShader OpticalDepthCompute => opticalDepthCompute;
-
-
+        
         [SerializeField, Range(3, 30)] private int inScatteringPoints;
         [SerializeField] private float sunIntensity;
 
@@ -268,6 +268,7 @@ namespace CelestialBodies.Sky
             absorbtionColor = Color.black;
             ambientColor = Color.black;
             opticalDepthPoints = 15;
+            enabled = false;
         }
 
         public void SetProperties(Material material)
