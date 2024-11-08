@@ -40,7 +40,8 @@ namespace CelestialBodies.Sky
 
         public static void RemoveEffect(IAtmosphereEffect effect)
         {
-            currentActiveEffect = null;
+            if(effect == currentActiveEffect)
+                currentActiveEffect = null;
         }
 
 
