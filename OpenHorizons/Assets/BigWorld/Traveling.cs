@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class Traveling : MonoBehaviour
 {
-    private float speedIncrease;
+    private float speedIncrease = 1000;
     private void Update()
     {
         speedIncrease += Time.deltaTime;
