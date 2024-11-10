@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 
-[CustomPropertyDrawer(typeof(doubleVector3))]
+[CustomPropertyDrawer(typeof(DoubleVector3))]
 public class IngredientDrawerUIE : PropertyDrawer
 {
     public override VisualElement CreatePropertyGUI(SerializedProperty property)

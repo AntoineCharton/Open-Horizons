@@ -95,7 +95,7 @@ namespace CelestialBodies.Terrain
             for (int i = 0; i < 6; i++)
             {
                 surface.MeshRenderers[i].sharedMaterial = surface.terrain.Material;
-                surface.TerrainFaces[i] = new TerrainFace(surface.ShapeGenerator, surface.meshFilters[i].sharedMesh, surface.Resolution, direction[i]);
+                surface.TerrainFaces[i] = new TerrainFace(surface.ShapeGenerator, surface.meshFilters[i].sharedMesh, surface.resolution, direction[i]);
             }
         }
 
@@ -263,12 +263,7 @@ namespace CelestialBodies.Terrain
     [Serializable]
     struct Surface
     {
-        [SerializeField, Range(3, 1024)] private int resolution;
-
-        public int Resolution
-        {
-            get { return Mathf.Max(resolution, 3); }
-        }
+        [SerializeField, Range(3, 1024)] internal int resolution;
 
         internal ShapeGenerator ShapeGenerator;
         internal ColorGenerator ColorGenerator;

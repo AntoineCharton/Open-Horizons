@@ -3,10 +3,10 @@ using UnityEngine;
 
 public class Traveling : MonoBehaviour
 {
-    private float speedIncrease = 1000;
+    private float speedIncrease = 0.000000000001f;
     private void Update()
     {
-        speedIncrease += Time.deltaTime;
+        speedIncrease += (Time.deltaTime* 100);
         transform.Translate(Vector3.back * (Time.deltaTime * speedIncrease), Space.World);
     }
 }

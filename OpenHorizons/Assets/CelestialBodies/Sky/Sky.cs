@@ -73,10 +73,10 @@ namespace CelestialBodies.Sky
                 return;
             }
 
-            atmosphereGenerator.planetRadius = radius + atmosphereGenerator.radiusOffset;
-            atmosphereGenerator.oceanRadius = 1;
+            atmosphereGenerator.planetRadius = radius + (atmosphereGenerator.radiusOffset / transform.lossyScale.x);
+            atmosphereGenerator.oceanRadius = 1 * transform.localScale.x;
             atmosphereGenerator.atmosphere.SetProperties(atmosphereGenerator.material);
-            atmosphereGenerator.ValidateOpticalDepth();
+            atmosphereGenerator.ValidateOpticalDepth(transform);
 
             atmosphereGenerator.material.SetTexture(BakedOpticalDepth, atmosphereGenerator.opticalDepthTexture);
             atmosphereGenerator.material.SetVector(PlanetCenter, transform.position);
@@ -94,12 +94,12 @@ namespace CelestialBodies.Sky
                 atmosphereGenerator.material.DisableKeyword("DIRECTIONAL_SUN");
             }
 
-            atmosphereGenerator.material.SetFloat(AtmosphereRadius, atmosphereGenerator.AtmosphereSize);
-            atmosphereGenerator.material.SetFloat(PlanetRadius, atmosphereGenerator.planetRadius);
+            atmosphereGenerator.material.SetFloat(AtmosphereRadius, atmosphereGenerator.AtmosphereSize * transform.lossyScale.x);
+            atmosphereGenerator.material.SetFloat(PlanetRadius, atmosphereGenerator.planetRadius * transform.lossyScale.x);
             atmosphereGenerator.material.SetFloat(OceanRadius, atmosphereGenerator.oceanRadius);
         }
 
-        static void ValidateOpticalDepth(this ref AtmosphereGenerator atmosphereGenerator)
+        static void ValidateOpticalDepth(this ref AtmosphereGenerator atmosphereGenerator, Transform transform)
         {
             bool upToDate = atmosphereGenerator.atmosphere.IsUpToDate(ref atmosphereGenerator.width,
                 ref atmosphereGenerator.points, ref atmosphereGenerator.rayFalloff, ref atmosphereGenerator.mieFalloff,
@@ -205,7 +205,15 @@ namespace CelestialBodies.Sky
         }
         
         [SerializeField] private bool enabled;
+
         public bool Enabled => enabled;
+        
+        [SerializeField] private bool visible;
+        public bool Visible
+        {
+            get => visible;
+            set => visible = value;
+        }
         
         public TextureSizes textureSize;
         [SerializeField] private ComputeShader opticalDepthCompute;
@@ -269,6 +277,7 @@ namespace CelestialBodies.Sky
             ambientColor = Color.black;
             opticalDepthPoints = 15;
             enabled = false;
+            visible = false;
         }
 
         public void SetProperties(Material material)

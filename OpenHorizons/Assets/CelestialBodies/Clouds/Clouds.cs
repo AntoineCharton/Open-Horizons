@@ -1,14 +1,11 @@
 using System;
 using UnityEngine;
 
-static class CloudsBuilder
-{
-}
-
 [Serializable]
 public struct Cloud
 {
     [SerializeField] private bool enabled;
+    [SerializeField] private bool visible;
     [SerializeField, Range(0, 1)] private float densityMultipler;
     [SerializeField, Range(0, 1)] private float shapeFactor;
     [SerializeField] private float shapeScale;
@@ -25,7 +22,13 @@ public struct Cloud
     [SerializeField] private Color scatteringTint;
 
     public bool Enabled => enabled;
-
+    
+    public bool Visible
+    {
+        get => visible;
+        set => visible = value;
+    }
+    
     public Vector3 ShapeOffset => shapeOffset;
 
     public Color ScatteringTint => scatteringTint;

@@ -264,13 +264,13 @@ namespace CelestialBodies.Clouds.Rendering
                 return;
             }
 
-            bool isActive = VolumetricCloudsPass.Cloud.Enabled;
+            bool isCloudsActive = VolumetricCloudsPass.Cloud.Enabled && VolumetricCloudsPass.Cloud.Visible;
             
             bool isDebugger = DebugManager.instance.isAnyDebugUIActive;
 
             bool isProbeCamera = renderingData.cameraData.cameraType == CameraType.Reflection && reflectionProbe;
 
-            if (isActive && (renderingData.cameraData.cameraType == CameraType.Game || renderingData.cameraData.cameraType == CameraType.SceneView || isProbeCamera) && (!isDebugger || renderingDebugger))
+            if (isCloudsActive && (renderingData.cameraData.cameraType == CameraType.Game || renderingData.cameraData.cameraType == CameraType.SceneView || isProbeCamera) && (!isDebugger || renderingDebugger))
             {
                 bool dynamicAmbientProbe = ambientProbe == CloudsAmbientMode.Dynamic;
                 _volumetricCloudsPass.DynamicAmbientProbe = dynamicAmbientProbe;
@@ -392,7 +392,7 @@ namespace CelestialBodies.Clouds.Rendering
             private float _verticalShapeOffset;
             private float _verticalErosionOffset;
             private Vector2 _windVector = Vector2.zero;
-            private static  Transform _transform;
+            internal static  Transform _transform;
 
             public static void RegisterPlanet(Transform transform)
             {
@@ -430,9 +430,9 @@ namespace CelestialBodies.Clouds.Rendering
                 _cloudsMaterial.SetFloat(NumPrimarySteps, 32);
                 _cloudsMaterial.SetFloat(NumLightSteps, 2);
                 _cloudsMaterial.SetFloat(MaxStepSize, Cloud.AltitudeRange / 8.0f);
-                float actualEarthRad = Mathf.Lerp(1.0f, 0.025f, 0) * EarthRad;
-                float bottomAltitude = Cloud.BottomAltitude + actualEarthRad;
-                float highestAltitude = bottomAltitude + Cloud.AltitudeRange;
+                float actualEarthRad = Mathf.Lerp(1.0f, 0.025f, 0) * (EarthRad  * VolumetricCloudsPass._transform.lossyScale.x);
+                float bottomAltitude = (Cloud.BottomAltitude * VolumetricCloudsPass._transform.lossyScale.x) + actualEarthRad;
+                float highestAltitude = (bottomAltitude + (Cloud.AltitudeRange * VolumetricCloudsPass._transform.lossyScale.x));
                 _cloudsMaterial.SetFloat(HighestCloudAltitude, highestAltitude);
                 _cloudsMaterial.SetFloat(LowestCloudAltitude, bottomAltitude);
                 _cloudsMaterial.SetVector(ShapeNoiseOffset, new Vector4(Cloud.ShapeOffset.x, Cloud.ShapeOffset.z, 0.0f, 0.0f));
@@ -481,8 +481,8 @@ namespace CelestialBodies.Clouds.Rendering
                 _cloudsMaterial.SetVector(GlobalSpeed, _windVector);
                 _cloudsMaterial.SetFloat(VerticalShapeDisplacement, _verticalShapeOffset);
                 _cloudsMaterial.SetFloat(VerticalErosionDisplacement, _verticalErosionOffset);
-                _cloudsMaterial.SetFloat(DensityMultiplier, Cloud.DensityMultipler * Cloud.DensityMultipler * 2.0f);
-                _cloudsMaterial.SetFloat(ShapeScale, Cloud.ShapeScale);
+                _cloudsMaterial.SetFloat(DensityMultiplier, (Cloud.DensityMultipler * Cloud.DensityMultipler * 2.0f) * VolumetricCloudsPass._transform.lossyScale.x);
+                _cloudsMaterial.SetFloat(ShapeScale, Cloud.ShapeScale / VolumetricCloudsPass._transform.lossyScale.x);
                 _cloudsMaterial.SetFloat(ShapeFactor, Cloud.ShapeFactor);
                 _cloudsMaterial.SetFloat(ErosionScale, Cloud.ErosionScale);
                 _cloudsMaterial.SetFloat(ErosionFactor, Cloud.ErosionFactor);
@@ -491,7 +491,7 @@ namespace CelestialBodies.Clouds.Rendering
                 _cloudsMaterial.SetColor(ScatteringTint, Color.white - Cloud.ScatteringTint * 0.75f);
                 _cloudsMaterial.SetFloat(AmbientProbeDimmer, 1);
                 _cloudsMaterial.SetFloat(SunLightDimmer, 1);
-                _cloudsMaterial.SetFloat(EarthRadius, actualEarthRad);
+                _cloudsMaterial.SetFloat(EarthRadius, actualEarthRad * _transform.lossyScale.x);
                 if(_transform == null)
                     _cloudsMaterial.SetVector(EarthPosition, new Vector4(0, 0, 0, 0));
                 else
@@ -499,7 +499,7 @@ namespace CelestialBodies.Clouds.Rendering
                     var position = _transform.position;
                     _cloudsMaterial.SetVector(EarthPosition, new Vector4(position.x, position.y, position.z, 0));
                 }
-                Vector3 cameraPosPS = camera.transform.position - new Vector3(0.0f, -actualEarthRad, 0.0f);
+                Vector3 cameraPosPS = camera.transform.position - new Vector3(0.0f, -actualEarthRad * _transform.lossyScale.x, 0.0f);
                 _cloudsMaterial.SetFloat(CloudnearPlane, max(GetCloudNearPlane(cameraPosPS, bottomAltitude, highestAltitude), camera.nearClipPlane));
 
                 // Custom cloud map is not supported yet.
@@ -1266,7 +1266,7 @@ namespace CelestialBodies.Clouds.Rendering
                     float3 c2 = lsToWsMat.MultiplyPoint(lightSpaceBounds.center + new Vector3(-lightSpaceBounds.extents.x, lightSpaceBounds.extents.y, lightSpaceBounds.extents.z));
 
                     float actualEarthRad = Mathf.Lerp(1.0f, 0.025f, 0) * VolumetricCloudsPass.EarthRad;
-                    float3 planetCenterPos = float3(0.0f, -actualEarthRad, 0.0f);
+                    float3 planetCenterPos = float3(0.0f, -actualEarthRad * VolumetricCloudsPass._transform.lossyScale.x, 0.0f);
 
                     float3 dirX = c1 - c0;
                     float3 dirY = c2 - c0;
@@ -1429,7 +1429,7 @@ namespace CelestialBodies.Clouds.Rendering
                     float3 c2 = lsToWsMat.MultiplyPoint(lightSpaceBounds.center + new Vector3(-lightSpaceBounds.extents.x, lightSpaceBounds.extents.y, lightSpaceBounds.extents.z));
 
                     float actualEarthRad = Mathf.Lerp(1.0f, 0.025f, 0) * VolumetricCloudsPass.EarthRad;
-                    float3 planetCenterPos = float3(0.0f, -actualEarthRad, 0.0f);
+                    float3 planetCenterPos = float3(0.0f, -actualEarthRad  * VolumetricCloudsPass._transform.lossyScale.x, 0.0f);
 
                     float3 dirX = c1 - c0;
                     float3 dirY = c2 - c0;
