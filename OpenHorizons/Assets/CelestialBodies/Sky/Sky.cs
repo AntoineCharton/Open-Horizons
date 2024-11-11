@@ -48,6 +48,38 @@ namespace CelestialBodies.Sky
             return atmosphereGenerator.material;
         }
 
+        public static MeshRenderer GetLodMesh(this ref AtmosphereGenerator atmosphereGenerator, Transform transform)
+        {
+            if (atmosphereGenerator.lodMesh == null)
+            {
+                var mesh = GameObject.CreatePrimitive(PrimitiveType.Sphere).GetComponent<MeshRenderer>();
+                mesh.transform.parent = transform;
+                mesh.transform.localPosition = Vector3.zero;
+                mesh.transform.localScale = Vector3.one * ((atmosphereGenerator.AtmosphereSize * 2) + atmosphereGenerator.lodSizeOffset);
+                atmosphereGenerator.lodMesh = mesh;
+                atmosphereGenerator.lodMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                atmosphereGenerator.lodMaterial.SetColor("_BaseColor", atmosphereGenerator.lodColor);
+                SetMaterialTransparent(atmosphereGenerator.lodMaterial, true);
+                atmosphereGenerator.lodMesh.material = atmosphereGenerator.lodMaterial;
+                
+            }
+
+            return atmosphereGenerator.lodMesh;
+        }
+        
+        private const int MATERIAL_OPAQUE = 0;
+        private const int MATERIAL_TRANSPARENT = 1;
+
+        private static void SetMaterialTransparent(Material material, bool enabled)
+        {
+            material.SetFloat("_Surface", enabled ? MATERIAL_TRANSPARENT : MATERIAL_OPAQUE);
+            material.SetShaderPassEnabled("SHADOWCASTER", !enabled);
+            material.renderQueue = enabled ? 3000 : 2000;
+            material.SetFloat("_DstBlend", enabled ? 10 : 0);
+            material.SetFloat("_SrcBlend", enabled ? 5 : 1);
+            material.SetFloat("_ZWrite", enabled ? 0 : 1);
+        }
+
         public static float DistToAtmosphere(this AtmosphereGenerator atmosphereGenerator, Transform transform,
             Vector3 pos)
         {
@@ -136,6 +168,11 @@ namespace CelestialBodies.Sky
         [SerializeField] internal Transform sun;
         [SerializeField] internal bool directional;
         [SerializeField] internal float radiusOffset;
+        [SerializeField] internal bool lod;
+        [SerializeField] internal Color lodColor;
+        [SerializeField] internal float lodSizeOffset;
+        [SerializeField] internal MeshRenderer lodMesh;
+        [SerializeField] internal Material lodMaterial;
 
         [SerializeField, Min(1f), HideInInspector] internal float planetRadius;
         [SerializeField, Min(1f), HideInInspector] internal float oceanRadius;

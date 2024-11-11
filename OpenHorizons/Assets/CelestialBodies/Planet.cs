@@ -28,8 +28,11 @@ namespace CelestialBodies
         {
             if (sky.atmosphere.Enabled && sky.atmosphere.Visible)
                 AtmosphereRenderPass.RegisterEffect(this);
-            else 
+            else
+            {
+                sky.GetLodMesh(transform).gameObject.SetActive(true);
                 AtmosphereRenderPass.RemoveEffect(this);
+            }
         }
 
         private void Update()
