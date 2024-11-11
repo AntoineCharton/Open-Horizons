@@ -382,7 +382,7 @@ namespace CelestialBodies.Clouds.Rendering
             private Texture2D _customLutPresetMap;
             private readonly Color[] _customLutColorArray = new Color[CustomLutMapResolution];
 
-            public const float EarthRad = 5500.0f;
+            public static float EarthRad = 6378.0f;
             public const float WindNormalizationFactor = 100000.0f; // NOISE_TEXTURE_NORMALIZATION_FACTOR in "VolumetricCloudsUtilities.hlsl"
             public const int CustomLutMapResolution = 64;
 
@@ -399,9 +399,10 @@ namespace CelestialBodies.Clouds.Rendering
                 _transform = transform;
             }
 
-            public static void UpdateSettings(Cloud cloudSettings)
+            public static void UpdateSettings(Cloud cloudSettings, float radius)
             {
                 Cloud = cloudSettings;
+                EarthRad = radius;
             }
         
             private static float Square(float x) => x * x;

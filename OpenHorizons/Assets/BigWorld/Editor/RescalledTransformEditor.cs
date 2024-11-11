@@ -1,5 +1,6 @@
 // IngredientDrawerUIE
 
+using BigWorld.Doubles;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;

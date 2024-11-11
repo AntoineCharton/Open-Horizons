@@ -37,7 +37,7 @@ namespace CelestialBodies
 
         private void Update()
         {
-            VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud);
+            VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, surface.shape.Radius);
             surface.LazyUpdate(transform);
         }
 
