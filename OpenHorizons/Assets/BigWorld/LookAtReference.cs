@@ -1,21 +1,21 @@
 using UnityEngine;
 
-[ExecuteInEditMode]
-public class LookAtReference : MonoBehaviour
+namespace BigWorld
 {
-    
-    [SerializeField] private ReferenceTransform referenceTransform;
-
-    // Update is called once per frame
-    void Update()
+    [ExecuteInEditMode]
+    public class LookAtReference : MonoBehaviour
     {
-        
-        if (referenceTransform is null)
+        [SerializeField] private ReferenceTransform referenceTransform;
+
+        // Update is called once per frame
+        void Update()
         {
-            referenceTransform = FindAnyObjectByType<ReferenceTransform>();
+            if (referenceTransform is null)
+            {
+                referenceTransform = FindAnyObjectByType<ReferenceTransform>();
+            }
+
+            transform.LookAt(referenceTransform.transform);
         }
-
-        transform.LookAt(referenceTransform.transform);
-
     }
 }
