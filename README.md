@@ -13,3 +13,5 @@ Licence is included at the end of each file that do not fall under the above lic
 [Atmosphere effect](https://github.com/sinnwrig/URP-Atmosphere)
 
 [Clouds effect](https://github.com/jiaozi158/UnityVolumetricCloudsURP)
+
+[Kepler Orbits](https://github.com/Karth42/SimpleKeplerOrbits)
