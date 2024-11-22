@@ -11,12 +11,9 @@ namespace BigWorld.Kepler
         void Start()
         {
             var body = GetComponent<KeplerOrbitMover>();
+            body.SetOrbitSettings(attractorTransform, attractorMass, GConstant);
 
-            body.attractorSettings.attractorObject = attractorTransform;
-            body.attractorSettings.attractorMass = attractorMass;
-            body.attractorSettings.gravityConstant = GConstant;
-
-            body.orbitData = new KeplerOrbitData(
+            body.SetOrbitData(new KeplerOrbitData(
                 eccentricity: 0, // Circular orbit
                 semiMajorAxis: 13599840256, // Kerbin's semi-major axis in meters
                 meanAnomalyDeg: 0, // Start at periapsis
@@ -25,7 +22,7 @@ namespace BigWorld.Kepler
                 ascendingNodeDeg: 0, // Not relevant for equatorial orbit
                 attractorMass: attractorMass,
                 gConst: GConstant
-            );
+            ));
 
             body.ForceUpdateViewFromInternalState();
         }

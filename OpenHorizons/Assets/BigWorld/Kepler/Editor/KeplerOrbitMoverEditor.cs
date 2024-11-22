@@ -20,7 +20,7 @@ namespace BigWorld.Kepler.Editor
 		{
 			base.OnInspectorGUI();
 
-			if (!_target.orbitData.IsValidOrbit)
+			if (!_target.OrbitData.IsValidOrbit)
 			{
 				GUI.enabled = false;
 			}
@@ -30,66 +30,66 @@ namespace BigWorld.Kepler.Editor
 				_target.SetAutoCircleOrbit();
 			}
 
-			if (_target.orbitData.eccentricity >= 1.0)
+			if (_target.OrbitData.eccentricity >= 1.0)
 			{
 				GUI.enabled = false;
 			}
 
-			if (_target.orbitData.eccentricity < 1.0)
+			if (_target.OrbitData.eccentricity < 1.0)
 			{
-				float meanAnomaly = EditorGUILayout.Slider("Mean anomaly", (float)_target.orbitData.meanAnomaly, 0, (float)KeplerOrbitUtils.PI2);
-				if (Math.Abs(meanAnomaly - (float)_target.orbitData.meanAnomaly) > 0.00001f)
+				float meanAnomaly = EditorGUILayout.Slider("Mean anomaly", (float)_target.OrbitData.meanAnomaly, 0, (float)KeplerOrbitUtils.PI2);
+				if (Math.Abs(meanAnomaly - (float)_target.OrbitData.meanAnomaly) > 0.00001f)
 				{
-					_target.orbitData.SetMeanAnomaly(meanAnomaly);
+					_target.OrbitData.SetMeanAnomaly(meanAnomaly);
 					_target.ForceUpdateViewFromInternalState();
 					EditorUtility.SetDirty(_target);
 				}
 			}
 			else
 			{
-				EditorGUILayout.LabelField("Mean anomaly", _target.orbitData.meanAnomaly.ToString(CultureInfo.InvariantCulture));
+				EditorGUILayout.LabelField("Mean anomaly", _target.OrbitData.meanAnomaly.ToString(CultureInfo.InvariantCulture));
 			}
 
-			if (_target.orbitData.IsValidOrbit && _target.orbitData.eccentricity >= 1.0)
+			if (_target.OrbitData.IsValidOrbit && _target.OrbitData.eccentricity >= 1.0)
 			{
 				GUI.enabled = true;
 			}
 
-			EditorGUILayout.LabelField("Velocity", _target.orbitData.velocity.magnitude.ToString("0.00000"));
+			EditorGUILayout.LabelField("Velocity", _target.OrbitData.velocity.magnitude.ToString("0.00000"));
 
-			string inclinationRad = _target.orbitData.Inclination.ToString(CultureInfo.InvariantCulture);
-			string inclinationDeg = (_target.orbitData.Inclination * KeplerOrbitUtils.Rad2Deg).ToString("0.000");
+			string inclinationRad = _target.OrbitData.Inclination.ToString(CultureInfo.InvariantCulture);
+			string inclinationDeg = (_target.OrbitData.Inclination * KeplerOrbitUtils.Rad2Deg).ToString("0.000");
 			EditorGUILayout.LabelField("Inclination", string.Format("{0,15} (deg={1})", inclinationRad, inclinationDeg));
 
-			string ascNodeRad = _target.orbitData.AscendingNodeLongitude.ToString(CultureInfo.InvariantCulture);
-			string ascNodeDeg = (_target.orbitData.AscendingNodeLongitude * KeplerOrbitUtils.Rad2Deg).ToString("0.000");
+			string ascNodeRad = _target.OrbitData.AscendingNodeLongitude.ToString(CultureInfo.InvariantCulture);
+			string ascNodeDeg = (_target.OrbitData.AscendingNodeLongitude * KeplerOrbitUtils.Rad2Deg).ToString("0.000");
 			EditorGUILayout.LabelField("AscendingNodeLongitude", string.Format("{0,15} (deg={1})", ascNodeRad, ascNodeDeg));
 
-			string argOfPeriRad = _target.orbitData.ArgumentOfPerifocus.ToString(CultureInfo.InvariantCulture);
-			string argOfPeriDeg = (_target.orbitData.ArgumentOfPerifocus * KeplerOrbitUtils.Rad2Deg).ToString("0.000");
+			string argOfPeriRad = _target.OrbitData.ArgumentOfPerifocus.ToString(CultureInfo.InvariantCulture);
+			string argOfPeriDeg = (_target.OrbitData.ArgumentOfPerifocus * KeplerOrbitUtils.Rad2Deg).ToString("0.000");
 			EditorGUILayout.LabelField("ArgumentOfPerifocus", string.Format("{0,15} (deg={1})", argOfPeriRad, argOfPeriDeg));
 
-			EditorGUILayout.LabelField("Current Orbit Time", _target.orbitData.GetCurrentOrbitTime().ToString("0.000"));
+			EditorGUILayout.LabelField("Current Orbit Time", _target.OrbitData.GetCurrentOrbitTime().ToString("0.000"));
 
-			EditorGUILayout.LabelField("Current MeanMotion", _target.orbitData.meanMotion.ToString("0.000"));
+			EditorGUILayout.LabelField("Current MeanMotion", _target.OrbitData.meanMotion.ToString("0.000"));
 
 			GUI.enabled = true;
 
-			if (_target.attractorSettings != null && _target.attractorSettings.attractorObject == _target.gameObject)
+			if (_target.AttractorSettings != null && _target.AttractorSettings.attractorObject == _target.gameObject)
 			{
-				_target.attractorSettings.attractorObject = null;
+				_target.AttractorSettings.attractorObject = null;
 				EditorUtility.SetDirty(_target);
 			}
 
-			if (_target.attractorSettings != null && _target.attractorSettings.gravityConstant < 0)
+			if (_target.AttractorSettings != null && _target.AttractorSettings.gravityConstant < 0)
 			{
-				_target.attractorSettings.gravityConstant = 0;
+				_target.AttractorSettings.gravityConstant = 0;
 				EditorUtility.SetDirty(_target);
 			}
 
-			if (_target.orbitData.gravConst < 0)
+			if (_target.OrbitData.gravConst < 0)
 			{
-				_target.orbitData.gravConst = 0;
+				_target.OrbitData.gravConst = 0;
 				EditorUtility.SetDirty(_target);
 			}
 		}
