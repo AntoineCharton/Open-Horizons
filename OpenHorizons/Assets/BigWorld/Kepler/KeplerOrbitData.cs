@@ -10,14 +10,21 @@ namespace BigWorld.Kepler
     /// Attractor data, necessary for calculation orbit.
     /// </summary>
     [Serializable]
-    public class AttractorData
+    public struct AttractorData
     {
         public Transform attractorObject;
-        public double attractorMass = 1000;
-        public double gravityConstant = 0.1f;
+        public double attractorMass;
+        public double gravityConstant;
+
+        public  AttractorData(double attractorMass, double gravityConstant)
+        {
+            this.attractorMass = attractorMass;
+            this.gravityConstant = gravityConstant;
+            attractorObject = null;
+        }
     }
 
-    public class EllipseData
+    public struct EllipseData
     {
         public double A;
         public double B;
@@ -83,7 +90,7 @@ namespace BigWorld.Kepler
         }
     }
 
-    public class HyperbolaData
+    public struct HyperbolaData
     {
         public double A;
         public double B;
@@ -109,6 +116,16 @@ namespace BigWorld.Kepler
         /// <param name="p0">Point on hyperbola branch 0.</param>
         public HyperbolaData(DoubleVector3 focus0, DoubleVector3 focus1, DoubleVector3 p0)
         {
+            A = 0;
+            B = 0;
+            C = 0;
+            Eccentricity = 0;
+            Center = DoubleVector3.zero;
+            FocusDistance = DoubleVector3.zero;
+            Focus0 = DoubleVector3.zero;
+            Focus1 = DoubleVector3.zero;
+            AxisMain = DoubleVector3.zero;
+            AxisSecondary = DoubleVector3.zero;
             Initialize(focus0, focus1, p0);
         }
 
@@ -152,9 +169,9 @@ namespace BigWorld.Kepler
     /// Also contains methods for altering and updating orbit state.
     /// </summary>
     [Serializable]
-    public class KeplerOrbitData
+    public struct KeplerOrbitData
     {
-        public double gravConst = 1;
+        public double gravConst;
 
         /// <summary>
         /// Normal of ecliptic plane.
@@ -182,12 +199,14 @@ namespace BigWorld.Kepler
         /// <summary>
         /// Magnitude of body position vector.
         /// </summary>
-        [FormerlySerializedAs("AttractorDistance")] public double attractorDistance;
+        [FormerlySerializedAs("AttractorDistance")]
+        public double attractorDistance;
 
         /// <summary>
         /// Attractor point mass.
         /// </summary>
-        [FormerlySerializedAs("AttractorMass")] public double attractorMass;
+        [FormerlySerializedAs("AttractorMass")]
+        public double attractorMass;
 
         /// <summary>
         /// Body velocity vector relative to attractor.
@@ -295,23 +314,13 @@ namespace BigWorld.Kepler
         }
 
         /// <summary>
-        /// Create new orbit state without initialization. Manual orbit initialization is required.
-        /// </summary>
-        /// <remarks>
-        /// To manually initialize orbit, fill known orbital elements and then call CalculateOrbitStateFrom... method.
-        /// </remarks>
-        public KeplerOrbitData()
-        {
-        }
-
-        /// <summary>
         /// Create and initialize new orbit state.
         /// </summary>
         /// <param name="position">Body local position, relative to attractor.</param>
         /// <param name="velocity">Body local velocity.</param>
         /// <param name="attractorMass">Attractor mass.</param>
         /// <param name="gConst">Gravitational Constant.</param>
-        public KeplerOrbitData(DoubleVector3 position, DoubleVector3 velocity, double attractorMass, double gConst)
+        public KeplerOrbitData(DoubleVector3 position, DoubleVector3 velocity, double attractorMass, double gConst) : this()
         {
             this.position = position;
             this.velocity = velocity;
@@ -333,7 +342,7 @@ namespace BigWorld.Kepler
         /// <param name="gConst">Gravitational constant.</param>
         public KeplerOrbitData(double eccentricity, double semiMajorAxis, double meanAnomalyDeg, double inclinationDeg,
             double argOfPerifocusDeg, double ascendingNodeDeg, double attractorMass,
-            double gConst)
+            double gConst) : this()
         {
             this.eccentricity = Math.Max(eccentricity, 0.00005f);
             this.semiMajorAxis = semiMajorAxis;
@@ -389,7 +398,7 @@ namespace BigWorld.Kepler
         /// <param name="attractorMass">Attractor mass.</param>
         /// <param name="gConst">Gravitational constant.</param>
         public KeplerOrbitData(double eccentricity, DoubleVector3 semiMajorAxis, DoubleVector3 semiMinorAxis,
-            double meanAnomalyDeg, double attractorMass, double gConst)
+            double meanAnomalyDeg, double attractorMass, double gConst) : this()
         {
             this.eccentricity = eccentricity;
             this.semiMajorAxisBasis = semiMajorAxis.normalized;
@@ -750,8 +759,7 @@ namespace BigWorld.Kepler
         /// <param name="pointsCount">The points count.</param>
         /// <param name="origin">The origin.</param>
         /// <param name="maxDistance">The maximum distance.</param>
-        public void GetOrbitPointsNoAlloc(ref DoubleVector3[] orbitPoints, int pointsCount, DoubleVector3 origin,
-            float maxDistance = 1000f)
+        public void GetOrbitPointsNoAlloc(ref DoubleVector3[] orbitPoints, int pointsCount, DoubleVector3 origin)
         {
             if (pointsCount < 2)
             {
@@ -766,47 +774,15 @@ namespace BigWorld.Kepler
                     orbitPoints = new DoubleVector3[pointsCount];
                 }
 
-                if (apoapsisDistance < maxDistance)
+                for (int i = 0; i < pointsCount; i++)
                 {
-                    for (int i = 0; i < pointsCount; i++)
-                    {
-                        orbitPoints[i] =
-                            GetFocalPositionAtEccentricAnomaly(i * KeplerOrbitUtils.PI2 / (pointsCount - 1d)) + origin;
-                    }
-                }
-                else
-                {
-                    double maxAngle = KeplerOrbitUtils.CalcTrueAnomalyForDistance(maxDistance, eccentricity,
-                        semiMajorAxis, periapsisDistance);
-                    for (int i = 0; i < pointsCount; i++)
-                    {
-                        orbitPoints[i] =
-                            GetFocalPositionAtTrueAnomaly(-maxAngle + i * 2d * maxAngle / (pointsCount - 1)) + origin;
-                    }
+                    orbitPoints[i] =
+                        GetFocalPositionAtEccentricAnomaly(i * KeplerOrbitUtils.PI2 / (pointsCount - 1d)) + origin;
                 }
             }
             else
             {
-                if (maxDistance < periapsisDistance)
-                {
-                    orbitPoints = new DoubleVector3[0];
-                    return;
-                }
-
-                if (orbitPoints == null || orbitPoints.Length != pointsCount)
-                {
-                    orbitPoints = new DoubleVector3[pointsCount];
-                }
-
-                double maxAngle =
-                    KeplerOrbitUtils.CalcTrueAnomalyForDistance(maxDistance, eccentricity, semiMajorAxis,
-                        periapsisDistance);
-
-                for (int i = 0; i < pointsCount; i++)
-                {
-                    orbitPoints[i] = GetFocalPositionAtTrueAnomaly(-maxAngle + i * 2d * maxAngle / (pointsCount - 1)) +
-                                     origin;
-                }
+                orbitPoints = new DoubleVector3[0];
             }
         }
 

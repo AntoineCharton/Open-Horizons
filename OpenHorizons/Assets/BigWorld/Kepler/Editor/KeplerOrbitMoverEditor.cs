@@ -74,24 +74,27 @@ namespace BigWorld.Kepler.Editor
 			EditorGUILayout.LabelField("Current MeanMotion", _target.OrbitData.meanMotion.ToString("0.000"));
 
 			GUI.enabled = true;
-
-			if (_target.AttractorSettings != null && _target.AttractorSettings.attractorObject == _target.gameObject)
+			Transform attractorTransform = _target.AttractorSettings.attractorObject;
+			double gravityConstant = _target.AttractorSettings.gravityConstant;
+			if(_target.AttractorSettings.attractorObject == _target.gameObject.transform)
 			{
-				_target.AttractorSettings.attractorObject = null;
+				attractorTransform = null;
 				EditorUtility.SetDirty(_target);
 			}
 
-			if (_target.AttractorSettings != null && _target.AttractorSettings.gravityConstant < 0)
+			if (_target.AttractorSettings.gravityConstant < 0)
 			{
-				_target.AttractorSettings.gravityConstant = 0;
+				gravityConstant = 0;
 				EditorUtility.SetDirty(_target);
 			}
 
 			if (_target.OrbitData.gravConst < 0)
 			{
-				_target.OrbitData.gravConst = 0;
+				_target.SetGravityConstant(0);
 				EditorUtility.SetDirty(_target);
 			}
+			
+			_target.SetOrbitSettings(attractorTransform, gravityConstant, _target.AttractorSettings.attractorMass);
 		}
 	}
 }

@@ -16,6 +16,13 @@ namespace BigWorld.Doubles
             Y = position.y;
             Z = position.z;
         }
+        
+        public DoubleVector3(DoubleVector3 position)
+        {
+	        X = position.X;
+	        Y = position.Y;
+	        Z = position.Z;
+        }
 
         public static float DistanceFloat(DoubleVector3 from, DoubleVector3 to)
         {

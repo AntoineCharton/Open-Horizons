@@ -207,7 +207,7 @@ namespace SimpleKeplerOrbits
                     precision: this.TargetDurationPrecision,
                     semiMajorAxisUpperLimit: this.MaxTransitionSemiMajorAxis);
 
-                if (trajectory.orbit != null && trajectory.orbit.IsValidOrbit && trajectory.Duration > 0 &&
+                if (trajectory.orbit.IsValidOrbit && trajectory.Duration > 0 &&
                     !double.IsInfinity(trajectory.Duration))
                 {
                     var velocityDiff = CalculateVelocityDifference(refs.Origin, refs.Target, trajectory.orbit,
@@ -680,7 +680,6 @@ namespace SimpleKeplerOrbits
         {
             if (_currentTransition == null) return false;
             if (_currentTransition.attractor == null) return false;
-            if (_currentTransition.orbit == null) return false;
             if (!_currentTransition.orbit.IsValidOrbit) return false;
 
             KeplerOrbitMover instance;
@@ -694,10 +693,7 @@ namespace SimpleKeplerOrbits
                         new Type[] { typeof(KeplerOrbitMover), typeof(KeplerOrbitLineDisplay) })
                     .GetComponent<KeplerOrbitMover>();
             }
-
-            instance.AttractorSettings.attractorMass = (float)_currentTransition.orbit.attractorMass;
-            instance.AttractorSettings.attractorObject = _currentTransition.attractor;
-            instance.AttractorSettings.gravityConstant = (float)_currentTransition.orbit.gravConst;
+            instance.SetOrbitSettings(_currentTransition.attractor, _currentTransition.orbit.attractorMass, _currentTransition.orbit.gravConst);
             instance.OrbitData = _currentTransition.orbit.CloneOrbit();
             instance.LockOrbitEditing = true;
             instance.OrbitData.SetEccentricAnomaly(_currentTransition.eccAnomalyStart);

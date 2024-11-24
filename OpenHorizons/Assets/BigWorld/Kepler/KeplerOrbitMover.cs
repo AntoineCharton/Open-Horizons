@@ -19,39 +19,44 @@ namespace BigWorld.Kepler
         /// The attractor settings data.
         /// Attractor object reference must be assigned or orbit mover will not work.
         /// </summary>
-        [SerializeField]
-        AttractorData attractorSettings = new AttractorData();
+        [SerializeField] AttractorData attractorSettings = new AttractorData(1000, 0.1f);
 
         public AttractorData AttractorSettings => attractorSettings;
 
         [FormerlySerializedAs("Scale")] [SerializeField]
         float scale = 100000000;
+
+        public float Scale => scale;
+
         /// <summary>
         /// The velocity handle object.
         /// Assign object and use it as velocity control handle in scene view.
         /// </summary>
-        [SerializeField][Tooltip("The velocity handle object. Assign object and use it as velocity control handle in scene view.")]
+        [SerializeField]
+        [Tooltip("The velocity handle object. Assign object and use it as velocity control handle in scene view.")]
         Transform velocityHandle;
 
         /// <summary>
         /// The velocity handle length scale parameter.
         /// </summary>
-        [SerializeField][Range(0f, 10f)] [Tooltip("Velocity handle scale parameter.")]
+        [SerializeField] [Range(0f, 10f)] [Tooltip("Velocity handle scale parameter.")]
         double velocityHandleLengthScale;
+
         public double VelocityHandleLengthScale => velocityHandleLengthScale;
 
         /// <summary>
         /// The time scale multiplier.
         /// </summary>
-        [SerializeField][Tooltip("The time scale multiplier.")]
+        [SerializeField] [Tooltip("The time scale multiplier.")]
         double timeScale = 1f;
+
         public double TimeScale => timeScale;
 
         /// <summary>
         /// The orbit data.
         /// Internal state of orbit.
         /// </summary>
-        [SerializeField][Header("Orbit state details:")] [Tooltip("Internal state of orbit.")]
+        [SerializeField] [Header("Orbit state details:")] [Tooltip("Internal state of orbit.")]
         KeplerOrbitData orbitData = new KeplerOrbitData();
 
         public KeplerOrbitData OrbitData
@@ -69,7 +74,9 @@ namespace BigWorld.Kepler
         /// In result, if unity vectors precision is not enough for current values, then orbit become unstable.
         /// To avoid this issue, you can disable comparison, and then orbit motion will be nice and stable, but you will no longer be able to change orbit by moving objects in editor.
         /// </remarks>
-        [SerializeField][Tooltip("Disable continious editing orbit in update loop, if you don't need it, or you need to fix Kraken issue on large scale orbits.")]
+        [SerializeField]
+        [Tooltip(
+            "Disable continious editing orbit in update loop, if you don't need it, or you need to fix Kraken issue on large scale orbits.")]
         bool lockOrbitEditing;
 
         public bool LockOrbitEditing
@@ -78,21 +85,13 @@ namespace BigWorld.Kepler
             set => lockOrbitEditing = value;
         }
 
-#if UNITY_EDITOR
-        /// <summary>
-        /// The debug error displayed flag.
-        /// Used to avoid errors spamming.
-        /// </summary>
-        private bool _debugErrorDisplayed;
-#endif
-
         private Coroutine _updateRoutine;
 
         private bool IsReferencesAsigned
         {
-            get { return attractorSettings != null && attractorSettings.attractorObject != null; }
+            get { return attractorSettings.attractorObject != null; }
         }
-
+        
         public void SetOrbitSettings(Transform attractorTransform, double attractorMass, double gravityConstant)
         {
             attractorSettings.attractorObject = attractorTransform;
@@ -134,6 +133,11 @@ namespace BigWorld.Kepler
             }
         }
 
+        public void SetGravityConstant(double gravityConstant)
+        {
+            orbitData.gravConst = gravityConstant;
+        }
+
         /// <summary>
         /// Updates orbit internal data.
         /// </summary>
@@ -149,8 +153,11 @@ namespace BigWorld.Kepler
             {
                 if (!lockOrbitEditing)
                 {
-                    var pos = (transform.position * scale) - attractorSettings.attractorObject.position;
-                    DoubleVector3 position = new DoubleVector3(pos.x, pos.y, pos.z);
+                    var rescaledPosition = new DoubleVector3(transform.position) * scale;
+                    var rescaledAttractorPosition =
+                        new DoubleVector3(attractorSettings.attractorObject.position) * scale;
+
+                    var position = (rescaledPosition * scale) - (rescaledAttractorPosition * scale);
 
                     bool velocityHandleChanged = false;
                     if (velocityHandle != null)
@@ -174,27 +181,14 @@ namespace BigWorld.Kepler
             }
             else
             {
-#if UNITY_EDITOR
-                if (attractorSettings.attractorObject == null)
+                if (Application.isPlaying)
                 {
-                    if (!_debugErrorDisplayed)
-                    {
-                        _debugErrorDisplayed = true;
-                        if (Application.isPlaying)
-                        {
-                            Debug.LogError("KeplerMover: Attractor reference not asigned", context: gameObject);
-                        }
-                        else
-                        {
-                            Debug.Log("KeplerMover: Attractor reference not asigned", context: gameObject);
-                        }
-                    }
+                    Debug.LogError("KeplerMover: Attractor reference not asigned", context: gameObject);
                 }
                 else
                 {
-                    _debugErrorDisplayed = false;
+                    Debug.Log("KeplerMover: Attractor reference not asigned", context: gameObject);
                 }
-#endif
             }
         }
 
@@ -258,9 +252,9 @@ namespace BigWorld.Kepler
         [ContextMenu("Update transform from orbit state")]
         public void ForceUpdateViewFromInternalState()
         {
-            var pos = new Vector3((float)orbitData.position.X, (float)orbitData.position.Y,
-                (float)orbitData.position.Z);
-            transform.position = (attractorSettings.attractorObject.position + pos) / scale;
+            var pos = new Vector3((float)(orbitData.position.X / scale), (float)(orbitData.position.Y / scale),
+                (float)(orbitData.position.Z / scale));
+            transform.position = attractorSettings.attractorObject.position + pos;
             ForceUpdateVelocityHandleFromInternalState();
         }
 
@@ -319,10 +313,11 @@ namespace BigWorld.Kepler
             {
                 orbitData.attractorMass = attractorSettings.attractorMass;
                 orbitData.gravConst = attractorSettings.gravityConstant;
-
+                var position = new DoubleVector3(transform.position * scale);
+                var attractorPosition = new DoubleVector3(attractorSettings.attractorObject.position * scale);
                 // Possible loss of precision, may be a problem in some situations.
-                var pos = (transform.position * scale) - attractorSettings.attractorObject.position;
-                orbitData.position = new DoubleVector3(pos.x, pos.y, pos.z);
+                var pos = position - attractorPosition;
+                orbitData.position = new DoubleVector3(pos.X, pos.Y, pos.Z);
                 if (velocityHandle != null)
                 {
                     Vector3 velocity = GetVelocityHandleDisplayedVelocity();

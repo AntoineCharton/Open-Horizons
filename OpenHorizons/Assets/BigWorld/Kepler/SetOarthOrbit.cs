@@ -15,7 +15,7 @@ namespace BigWorld.Kepler
 
             body.SetOrbitData(new KeplerOrbitData(
                 eccentricity: 0, // Circular orbit
-                semiMajorAxis: 13599840256, // Kerbin's semi-major axis in meters
+                semiMajorAxis: 13599840256, 
                 meanAnomalyDeg: 0, // Start at periapsis
                 inclinationDeg: 90, // Equatorial orbit
                 argOfPerifocusDeg: 0, // Not relevant for circular orbit

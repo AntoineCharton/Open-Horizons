@@ -27,8 +27,8 @@ namespace SimpleKeplerOrbits
 				EditorGUILayout.LabelField("Departure delta-v required", (_target.CurrentTransition == null || _target.CurrentTransition.impulseDifferences == null || _target.CurrentTransition.impulseDifferences.Count < 1 ? "-" : _target.CurrentTransition.impulseDifferences[0].magnitude.ToString()));
 				EditorGUILayout.LabelField("Arrival delta-v required", (_target.CurrentTransition == null || _target.CurrentTransition.impulseDifferences == null || _target.CurrentTransition.impulseDifferences.Count < 1 ? "-" : _target.CurrentTransition.impulseDifferences[1].magnitude.ToString()));
 				EditorGUILayout.LabelField("Total delta-v required", (_target.CurrentTransition == null ? "0" : _target.CurrentTransition.totalDeltaV.ToString()));
-				EditorGUILayout.LabelField("Eccentricity", (_target.CurrentTransition == null || _target.CurrentTransition.orbit == null  ? "0" : _target.CurrentTransition.orbit.eccentricity.ToString()));
-				EditorGUILayout.LabelField("SemiMajor axis", (_target.CurrentTransition == null || _target.CurrentTransition.orbit == null  ? "0" : _target.CurrentTransition.orbit.semiMajorAxis.ToString()));
+				EditorGUILayout.LabelField("Eccentricity", (_target.CurrentTransition == null ? "0" : _target.CurrentTransition.orbit.eccentricity.ToString()));
+				EditorGUILayout.LabelField("SemiMajor axis", (_target.CurrentTransition == null ? "0" : _target.CurrentTransition.orbit.semiMajorAxis.ToString()));
 			}
 			GUILayout.EndVertical();
 			if (_target.CurrentTransition == null)
