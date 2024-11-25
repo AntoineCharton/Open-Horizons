@@ -185,10 +185,6 @@ namespace BigWorld.Kepler
                 {
                     Debug.LogError("KeplerMover: Attractor reference not asigned", context: gameObject);
                 }
-                else
-                {
-                    Debug.Log("KeplerMover: Attractor reference not asigned", context: gameObject);
-                }
             }
         }
 

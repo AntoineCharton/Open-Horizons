@@ -40,7 +40,7 @@ namespace BigWorld.Doubles
             DoubleVector3 transformScale, DoubleVector3 pos)
         {
             DoubleMatrix4X4 matrix =
-                DoubleMatrix4X4.GetTRSMatrix(transforPos, transformRotation.eulerAngles, transformScale);
+                DoubleMatrix4X4.TRS(transforPos, transformRotation.eulerAngles, transformScale);
             DoubleMatrix4X4 inverse = DoubleMatrix4X4.Invert(matrix);
             return inverse.MultiplyPoint3X4(pos);
         }
@@ -131,6 +131,25 @@ namespace BigWorld.Doubles
 		public static bool operator !=(DoubleVector3 lhs, DoubleVector3 rhs)
 		{
 			return DoubleVector3.SqrMagnitude(lhs - rhs) >= 0.0 / 1.0;
+		}
+		
+		public static DoubleVector3 operator *(Quaternion quaternion, DoubleVector3 vector)
+		{
+			double qx = quaternion.x;
+			double qy = quaternion.y;
+			double qz = quaternion.z;
+			double qw = quaternion.w;
+			
+			double ix = qw * vector.X + qy * vector.Z - qz * vector.Y;
+			double iy = qw * vector.Y + qz * vector.X - qx * vector.Z;
+			double iz = qw * vector.Z + qx * vector.Y - qy * vector.X;
+			double iw = -qx * vector.X - qy * vector.Y - qz * vector.Z;
+			
+			double rx = ix * qw + iw * -qx + iy * -qz - iz * -qy;
+			double ry = iy * qw + iw * -qy + iz * -qx - ix * -qz;
+			double rz = iz * qw + iw * -qz + ix * -qy - iy * -qx;
+
+			return new DoubleVector3(rx, ry, rz);
 		}
 
 		public static DoubleVector3 Lerp(DoubleVector3 from, DoubleVector3 to, double t)

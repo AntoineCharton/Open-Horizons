@@ -5,7 +5,7 @@ namespace BigWorld.Kepler
     public class SetOarthOrbit : MonoBehaviour
     {
         public Transform attractorTransform; // Assign the Sun's Transform in the Inspector
-        public double attractorMass = 1.7565459e28; // Sun's mass
+        public double attractorMass = 8.807055206922783e19; // Calculated attractor mass (kg)
         public double GConstant = 6.67430e-11; // Gravitational constant
 
         void Start()
@@ -15,7 +15,7 @@ namespace BigWorld.Kepler
 
             body.SetOrbitData(new KeplerOrbitData(
                 eccentricity: 0, // Circular orbit
-                semiMajorAxis: 13599840256, 
+                semiMajorAxis: 10000000,
                 meanAnomalyDeg: 0, // Start at periapsis
                 inclinationDeg: 90, // Equatorial orbit
                 argOfPerifocusDeg: 0, // Not relevant for circular orbit

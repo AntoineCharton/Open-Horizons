@@ -13,6 +13,7 @@ namespace BigWorld
         [SerializeField] private ReferenceTransform referenceTransform;
         private DoubleVector3 _originalOffset;
         [SerializeField] private Planet planet;
+        [SerializeField] private float rescaleMultiplicator = 11; // This needs to go away and be calculated in code
         private double _size;
         private double _width;
 
@@ -56,7 +57,7 @@ namespace BigWorld
                     transform.position =
                         (new Vector3((float)localPosition.X, (float)localPosition.Y, (float)localPosition.Z)
                             .normalized * 18500) + referenceTransform.transform.position;
-                    float targetSize = (float)_size * 11;
+                    float targetSize = (float)_size * rescaleMultiplicator;
                     float currentSize = planet.GetBounds().size.z;
                     Vector3 scale = planet.transform.localScale;
                     scale.z = targetSize * scale.z / currentSize;
