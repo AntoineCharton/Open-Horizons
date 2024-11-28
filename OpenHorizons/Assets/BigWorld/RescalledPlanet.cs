@@ -25,7 +25,7 @@ namespace BigWorld
             planet.transform.localScale = currentScale;
         }
 
-        private void LateUpdate()
+        private void Update()
         {
             if (referenceTransform is null)
             {
@@ -43,7 +43,7 @@ namespace BigWorld
                 planet.CloudsActive(true);
                 planet.AtmosphereActive(true);
                 var distance = DoubleVector3.Distance(referenceTransform.UniversePosition, position);
-                if (distance < 20000)
+                if (distance < 150000)
                 {
                     planet.transform.localScale = Vector3.one;
                     transform.position = new Vector3((float)(position.X - referenceTransform.referencePosition.X),
@@ -56,7 +56,7 @@ namespace BigWorld
                         quaternion.identity, new DoubleVector3(1, 1, 1), position);
                     transform.position =
                         (new Vector3((float)localPosition.X, (float)localPosition.Y, (float)localPosition.Z)
-                            .normalized * 18500) + referenceTransform.transform.position;
+                            .normalized * 148500) + referenceTransform.transform.position;
                     float targetSize = (float)_size * rescaleMultiplicator;
                     float currentSize = planet.GetBounds().size.z;
                     Vector3 scale = planet.transform.localScale;

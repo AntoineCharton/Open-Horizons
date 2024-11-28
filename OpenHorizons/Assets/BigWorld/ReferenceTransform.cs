@@ -12,7 +12,6 @@ namespace BigWorld
         public DoubleVector3 referencePosition;
         public DoubleVector3 localPosition;
         public DoubleVector3 simulationPosition;
-        public Transform test;
 
         public DoubleVector3 UniversePosition
         {
@@ -23,12 +22,12 @@ namespace BigWorld
         private void Update()
         {
             simulationPosition = new DoubleVector3(transform.position);
-            var parentMatrix = DoubleMatrix4X4.TRS(relativePosition.position, relativePosition.transform.rotation.eulerAngles, DoubleVector3.one);
+            var parentMatrix = DoubleMatrix4X4.TRS(relativePosition != null ? relativePosition.position : DoubleVector3.zero,
+                relativePosition != null ? relativePosition.transform.rotation.eulerAngles : Vector3.zero, DoubleVector3.one);
             var localPos = parentMatrix.MultiplyPoint3X4(localPosition);
             referencePosition = localPos;
             if (Vector3.Distance(transform.position, Vector3.zero) > 1000)
             {
-                var position = relativePosition.position;
                 localPosition.X += simulationPosition.X;
                 localPosition.Y += simulationPosition.Y;
                 localPosition.Z += simulationPosition.Z;

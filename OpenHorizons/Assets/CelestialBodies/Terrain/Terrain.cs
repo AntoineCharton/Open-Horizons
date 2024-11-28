@@ -1,7 +1,9 @@
 using System;
-using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Profiling;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 
@@ -33,26 +35,33 @@ namespace CelestialBodies.Terrain
         
         internal static void LazyUpdate(this ref Surface surface, Transform transform)
         {
+            Profiler.BeginSample("Update Planet Mesh");
             if (surface.terrain.Material.mainTexture == null) // When we loose serialization we want to regenerate the texture
             {
                 surface.Dirty = true;
             }
             if (surface.Dirty)
             {
-                Stopwatch stopWatch = new Stopwatch();
-                stopWatch.Start();
-                surface.InitializeSurface(transform);
-                surface.GenerateMesh();
+                if(surface.currentSurface == 0 || surface.TerrainFaces == null)
+                    surface.InitializeSurface(transform);
+                var finishedSurface = surface.GenerateMesh();
                 surface.GenerateColor();
-                surface.Dirty = false;
-                stopWatch.Stop();
-                TimeSpan ts = stopWatch.Elapsed; string elapsedTime = $"{ts.Hours:00}:{ts.Minutes:00}:{ts.Seconds:00}.{ts.Milliseconds / 10:00}"; UnityEngine.Debug.Log("RunTime " + elapsedTime);
+                if(Application.isPlaying) 
+                    surface.Dirty = !finishedSurface;
+                else
+                {
+                    surface.Dirty = false;
+                }
             }
+            
+            surface.AssignMesh();
+            Profiler.EndSample();
         }
         
         internal static void Dirty(this ref Surface surface)
         {
             surface.Dirty = true;
+            surface.currentSurface = 0;
         }
         
         internal static void GenerateColor(this Surface surface)
@@ -60,26 +69,67 @@ namespace CelestialBodies.Terrain
             surface.ColorGenerator.GenerateColor();
         }
         
-        internal static void GenerateMesh(this ref Surface surface)
+        internal static bool GenerateMesh(this ref Surface surface)
+        {
+            var iterations = 1;
+            if (!Application.isPlaying)
+            {
+                iterations = surface.TerrainFaces.Length;
+                surface.currentSurface = 0;
+            }
+            
+            for (var i = 0; i < iterations; i++)
+            {
+                if (surface.currentSurface > surface.TerrainFaces.Length - 1)
+                {
+                    surface.currentSurface = 0;
+                    return true;
+                }
+                
+                var isDoubleResolution = surface.currentSurface == 0;
+                surface.TerrainFaces[surface.currentSurface].GeneratePlanet(isDoubleResolution);
+                surface.currentSurface++;
+                
+                surface.ColorGenerator.UpdateElevation(surface.ShapeGenerator.ElevationMinMax);
+            }
+
+            return false;
+        }
+        
+        internal static void AssignMesh(this ref Surface surface)
         {
             for (var i = 0; i < surface.TerrainFaces.Length; i++)
             {
-                surface.TerrainFaces[i].GeneratePlanet();
+                if (surface.TerrainFaces[i].Mesh == null)
+                    UnityEngine.Debug.Log("Mesh Shouldn't be null");
+                else
+                {
+                    if (!surface.TerrainFaces[i].TerrainMeshData.IsGeneratingVertex &&
+                        surface.TerrainFaces[i].TerrainMeshData.IsDoneGeneratingVertex)
+                    {
+                        surface.TerrainFaces[i].Mesh.Clear();
+                        surface.TerrainFaces[i].Mesh.vertices = surface.TerrainFaces[i].TerrainMeshData.Vertices;
+                        surface.TerrainFaces[i].Mesh.triangles = surface.TerrainFaces[i].TerrainMeshData.Triangles;
+                        surface.TerrainFaces[i].Mesh.normals = surface.TerrainFaces[i].TerrainMeshData.Normals;
+                        surface.TerrainFaces[i].TerrainMeshData.IsDoneGeneratingVertex = false;
+                        if(Application.isPlaying)
+                            return; //We only want to do that once per frame to avoid lags
+                    }
+                }
             }
-            
-            surface.ColorGenerator.UpdateElevation(surface.ShapeGenerator.ElevationMinMax);
         }
         
         internal static void InitializeSurface(this ref Surface surface, Transform transform)
         {
             surface.ShapeGenerator = new ShapeGenerator(surface.shape);
             surface.ColorGenerator = new ColorGenerator(surface.terrain);
+            var subdivision = surface.subdivisions;
             if (surface.meshFilters == null || surface.meshFilters.Length == 0)
             {
-                surface.meshFilters = new MeshFilter[6];
+                surface.meshFilters = new MeshFilter[6 * (subdivision * subdivision)];
             }
-
-            surface.TerrainFaces = new TerrainFace[6];
+            
+            surface.TerrainFaces = new TerrainFace[6 * (subdivision * subdivision)];
 
             Vector3[] direction =
                 { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
@@ -94,14 +144,22 @@ namespace CelestialBodies.Terrain
 
             for (int i = 0; i < 6; i++)
             {
-                surface.MeshRenderers[i].sharedMaterial = surface.terrain.Material;
-                surface.TerrainFaces[i] = new TerrainFace(surface.ShapeGenerator, surface.meshFilters[i].sharedMesh, surface.resolution, direction[i]);
+                var tilesNumber = (subdivision * subdivision);
+                for (int j = 0; j < tilesNumber; j++)
+                {
+                    var id = (i * tilesNumber) + j;
+                    int lineID = j / subdivision;
+                    int rowID = j % subdivision;
+                    surface.MeshRenderers[id].sharedMaterial = surface.terrain.Material;
+                    surface.TerrainFaces[id] = new TerrainFace(surface.ShapeGenerator, surface.meshFilters[id].sharedMesh,
+                        surface.minResolution, surface.highResolution,rowID, lineID, subdivision, direction[i]);
+                }
             }
         }
 
         internal static void LazyMeshInitialization(this Surface surface, Transform transform)
         {
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 6 * (surface.subdivisions * surface.subdivisions); i++)
             {
                 if (surface.meshFilters[i] == null)
                 {
@@ -119,41 +177,131 @@ namespace CelestialBodies.Terrain
             colorGenerator.UpdateColors();
         }
         
-        internal static void GeneratePlanet(this TerrainFace terrainFace)
+        internal static void GeneratePlanet(this TerrainFace terrainFace, bool doubleResolution)
         {
-            Vector3[] vertices = new Vector3[terrainFace.Resolution * terrainFace.Resolution];
-            int[] triangles = new int[(terrainFace.Resolution - 1) * (terrainFace.Resolution - 1) * 6];
-           
-            Parallel.For(0, terrainFace.Resolution, y =>
+
+            var resolution = terrainFace.MinResolution;
+            if (doubleResolution)
+                resolution = terrainFace.HighResolution;
+
+            if (terrainFace.TerrainMeshData.CurrentThread != null)
             {
-                int triIndex = y * (terrainFace.Resolution - 1) * 6;
-                for (int x = 0; x < terrainFace.Resolution; x++)
-                {
-                    int i = x + y * terrainFace.Resolution;
-                    Vector2 percent = new Vector2(x, y) / (terrainFace.Resolution - 1);
-                    Vector3 pointOnUnitCube = terrainFace.LocalUp + (percent.x - 0.5f) * 2 * terrainFace.AxisA +
-                                              (percent.y - 0.5f) * 2 * terrainFace.AxisB;
+                terrainFace.TerrainMeshData.CurrentThread.Abort();
+            }
+
+            if (Application.isPlaying)
+            {
+                terrainFace.TerrainMeshData.CurrentThread = new Thread(() => CalculateFaceSynchronous(terrainFace, resolution));
+                terrainFace.TerrainMeshData.CurrentThread.Start();
+            }
+            else
+            {
+                CalculateFaceParallel(terrainFace, Mathf.Min(resolution, 64));
+            }
+        }
+
+        private static void CalculateFace(ref TerrainFace terrainFace, int resolution, int y)
+        {
+            int triIndex = y * (resolution - 1) * 6;
+            for (int x = 0; x < resolution; x++)
+            {
+                int i = x + y * resolution;
+                var sizeX = ((resolution - 1) * terrainFace.NumberOfSubdivisions);
+                var sizeY = ((resolution - 1) * terrainFace.NumberOfSubdivisions);
+                Vector2 percent = new Vector2(((float)x / sizeX), ((float)y / sizeY));
+                Vector3 pointOnUnitCube = Vector3.zero;
+                var line = 0.5f - (((0.5f / terrainFace.NumberOfSubdivisions) * terrainFace.LineID)*2);
+                var row = 0.5f - (((0.5f / terrainFace.NumberOfSubdivisions) * terrainFace.RowID)*2);
+                pointOnUnitCube = terrainFace.LocalUp + (percent.x - line) * 2 * terrainFace.AxisA +
+                                  (percent.y - row) * 2 * terrainFace.AxisB;
                     
-                    if (x != terrainFace.Resolution - 1 && y != terrainFace.Resolution - 1)
-                    {
-                        triangles[triIndex] = i;
-                        triangles[triIndex + 1] = i + terrainFace.Resolution + 1;
-                        triangles[triIndex + 2] = i + terrainFace.Resolution;
+                if (x != resolution - 1 && y != resolution - 1)
+                {
+                    terrainFace.TerrainMeshData.Triangles[triIndex] = i;
+                    terrainFace.TerrainMeshData.Triangles[triIndex + 1] = i + resolution + 1;
+                    terrainFace.TerrainMeshData.Triangles[triIndex + 2] = i + resolution;
 
-                        triangles[triIndex + 3] = i;
-                        triangles[triIndex + 4] = i + 1;
-                        triangles[triIndex + 5] = i + terrainFace.Resolution + 1;
-                        triIndex += 6;
-                    }
-                    Vector3 pointOnUnitSphere = pointOnUnitCube.normalized;
-                    vertices[i] = terrainFace.ShapeGenerator.CalculatePointOnPlanet(pointOnUnitSphere);
+                    terrainFace.TerrainMeshData.Triangles[triIndex + 3] = i;
+                    terrainFace.TerrainMeshData.Triangles[triIndex + 4] = i + 1;
+                    terrainFace.TerrainMeshData.Triangles[triIndex + 5] = i + resolution + 1;
+                    triIndex += 6;
                 }
-            });
+                Vector3 pointOnUnitSphere = pointOnUnitCube.normalized;
+                terrainFace.TerrainMeshData.Vertices[i] = terrainFace.ShapeGenerator.CalculatePointOnPlanet(pointOnUnitSphere);
+            }
+        }
 
-            terrainFace.Mesh.Clear();
-            terrainFace.Mesh.vertices = vertices;
-            terrainFace.Mesh.triangles = triangles;
-            terrainFace.Mesh.RecalculateNormals();
+        private static void InitializeFace(ref TerrainFace terrainFace, int resolution)
+        {
+            if (terrainFace.TerrainMeshData.Vertices == null ||
+                terrainFace.TerrainMeshData.Vertices.Length != resolution)
+            {
+                terrainFace.TerrainMeshData.Vertices = new Vector3[resolution * resolution];
+                terrainFace.TerrainMeshData.Normals = new Vector3[resolution * resolution];
+                terrainFace.TerrainMeshData.Triangles = new int[(resolution - 1) * (resolution - 1) * 6];
+            }
+
+            terrainFace.TerrainMeshData.IsGeneratingVertex = true;
+            terrainFace.TerrainMeshData.IsDoneGeneratingVertex = false;
+        }
+
+        private static void FinishFaceCalculation(ref TerrainFace terrainFace)
+        {
+            terrainFace.TerrainMeshData.Normals = RecalculateNormals(terrainFace.TerrainMeshData.Vertices, terrainFace.TerrainMeshData.Triangles);
+            terrainFace.TerrainMeshData.IsDoneGeneratingVertex = true;
+            terrainFace.TerrainMeshData.IsGeneratingVertex = false;
+        }
+
+        private static void CalculateFaceSynchronous(TerrainFace terrainFace, int resolution)
+        {
+            InitializeFace(ref terrainFace, resolution);
+            for(var y = 0; y < resolution; y ++)
+            {
+                CalculateFace(ref terrainFace, resolution, y);
+            };
+            FinishFaceCalculation(ref terrainFace);
+        }
+
+        private static void CalculateFaceParallel(TerrainFace terrainFace, int resolution)
+        {
+            InitializeFace(ref terrainFace, resolution);
+            Parallel.For(0, resolution, y =>
+            {
+                CalculateFace(ref terrainFace, resolution, y);
+            });
+            FinishFaceCalculation(ref terrainFace);
+        }
+        
+        private static Vector3[] RecalculateNormals(Vector3[] vertices, int[] triangles)
+        {
+            Vector3[] normals = new Vector3[vertices.Length];
+        
+            // Initialize normals to zero
+            for (int i = 0; i < normals.Length; i++)
+                normals[i] = Vector3.zero;
+
+            // Calculate normals per triangle
+            for (int i = 0; i < triangles.Length; i += 3)
+            {
+                int v0 = triangles[i];
+                int v1 = triangles[i + 1];
+                int v2 = triangles[i + 2];
+
+                Vector3 edge1 = vertices[v1] - vertices[v0];
+                Vector3 edge2 = vertices[v2] - vertices[v0];
+
+                Vector3 normal = Vector3.Cross(edge1, edge2).normalized;
+
+                normals[v0] += normal;
+                normals[v1] += normal;
+                normals[v2] += normal;
+            }
+
+            // Normalize the normals
+            for (int i = 0; i < normals.Length; i++)
+                normals[i] = normals[i].normalized;
+
+            return normals;
         }
 
         internal static float EvaluateRigidNoise(this NoiseSettings noiseSettings, Noise noise, Vector3 point)
@@ -263,13 +411,15 @@ namespace CelestialBodies.Terrain
     [Serializable]
     struct Surface
     {
-        [SerializeField, Range(3, 1024)] internal int resolution;
-
+        [SerializeField, Range(3, 127)] internal int minResolution;
+        [SerializeField, Range(3, 4096)] internal int highResolution;
+        [SerializeField, Range(1, 9)] internal int subdivisions;
+        internal int currentSurface;
         internal ShapeGenerator ShapeGenerator;
         internal ColorGenerator ColorGenerator;
 
-        [SerializeField, HideInInspector] internal MeshFilter[] meshFilters;
-        [SerializeField, HideInInspector] private MeshRenderer[] meshRenderers;
+        [SerializeField] internal MeshFilter[] meshFilters;
+        [SerializeField] private MeshRenderer[] meshRenderers;
 
         public MeshRenderer[] MeshRenderers
         {
@@ -296,24 +446,46 @@ namespace CelestialBodies.Terrain
         internal bool Dirty;
     }
 
+    class TerrainMeshData
+    {
+        internal Vector3[] Vertices;
+        internal Vector3[] Normals;
+        internal int[] Triangles;
+        internal bool IsGeneratingVertex;
+        internal bool IsDoneGeneratingVertex;
+        internal Thread CurrentThread;
+
+
+    }
+
     struct TerrainFace
     {
         internal ShapeGenerator ShapeGenerator;
         internal readonly Mesh Mesh;
-        internal readonly int Resolution;
+        internal readonly int RowID;
+        internal readonly int LineID;
+        internal readonly int NumberOfSubdivisions;
+        internal readonly int MinResolution;
+        internal readonly int HighResolution;
         internal readonly Vector3 LocalUp;
         internal readonly Vector3 AxisA;
         internal readonly Vector3 AxisB;
+        internal TerrainMeshData TerrainMeshData;
 
-        public TerrainFace(ShapeGenerator shapeGenerator, Mesh mesh, int resolution, Vector3 localUp)
+        public TerrainFace(ShapeGenerator shapeGenerator, Mesh mesh, int minResolution, int highResolution, int rowID, int lineID, int numberOfSubdivisions, Vector3 localUp)
         {
             ShapeGenerator = shapeGenerator;
             Mesh = mesh;
             Mesh.indexFormat = IndexFormat.UInt32;
-            Resolution = resolution;
+            MinResolution = minResolution;
+            HighResolution = highResolution;
             LocalUp = localUp;
             AxisA = new Vector3(localUp.y, localUp.z, localUp.x);
             AxisB = Vector3.Cross(localUp, AxisA);
+            RowID = rowID;
+            LineID = lineID;
+            NumberOfSubdivisions = numberOfSubdivisions;
+            TerrainMeshData = new TerrainMeshData();
         }
     }
 

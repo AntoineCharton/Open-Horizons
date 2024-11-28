@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace CelestialBodies
 {
-    [ExecuteInEditMode]
+    [ExecuteAlways]
     public class Planet : MonoBehaviour, IAtmosphereEffect
     {
         [SerializeField] private Surface surface;
@@ -39,15 +39,6 @@ namespace CelestialBodies
         {
             VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, surface.shape.Radius);
             surface.LazyUpdate(transform);
-        }
-
-        public float GetWidth()
-        {
-            return surface.shape.Radius * 2;
-        }
-
-        private void LateUpdate()
-        {
             sky.LazyUpdate(transform, surface.shape.Radius);
         }
         
@@ -71,9 +62,9 @@ namespace CelestialBodies
         public void CloudsActive(bool isActive)
         {
             cloud.Visible = isActive;
-            if (!cloud.Visible && surface.resolution != 256)
+            if (!cloud.Visible && surface.highResolution != 256)
             {
-                surface.resolution = 256;
+                surface.highResolution = 256;
                 surface.Dirty = true;
             }
         }
