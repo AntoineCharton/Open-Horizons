@@ -323,7 +323,7 @@ namespace BigWorld
                 new DoubleVector4(0, 0, 0, 1));
         }
 
-        public static DoubleMatrix4X4 GetTRSMatrix(DoubleVector3 position, Vector3 rotationAngles, DoubleVector3 scale)
+        public static DoubleMatrix4X4 TRS(DoubleVector3 position, Vector3 rotationAngles, DoubleVector3 scale)
         {
             return GetTranslationMatrix(position) * GetRotationMatrix(rotationAngles) * GetScaleMatrix(scale);
         }
