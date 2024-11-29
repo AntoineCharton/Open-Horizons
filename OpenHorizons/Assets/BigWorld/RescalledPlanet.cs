@@ -25,7 +25,7 @@ namespace BigWorld
             planet.transform.localScale = currentScale;
         }
 
-        private void Update()
+        private void LateUpdate()
         {
             if (referenceTransform is null)
             {
