@@ -34,15 +34,18 @@ namespace CelestialBodies.Terrain
 
         internal static void CleanUpMeshes(this ref Surface surface)
         {
-            for (var i = 0; i < surface.MeshRenderers.Length; i++)
+            if (surface.MeshRenderers != null)
             {
-                if(surface.MeshRenderers[i] != null)
+                for (var i = 0; i < surface.MeshRenderers.Length; i++)
                 {
-                    if (Application.isPlaying)
-                        GameObject.Destroy(surface.MeshRenderers[i].gameObject);
-                    else
+                    if (surface.MeshRenderers[i] != null)
                     {
-                        GameObject.DestroyImmediate(surface.MeshRenderers[i].gameObject);
+                        if (Application.isPlaying)
+                            GameObject.Destroy(surface.MeshRenderers[i].gameObject);
+                        else
+                        {
+                            GameObject.DestroyImmediate(surface.MeshRenderers[i].gameObject);
+                        }
                     }
                 }
             }
@@ -53,7 +56,7 @@ namespace CelestialBodies.Terrain
         
         internal static void SmartUpdate(this ref Surface surface, Transform transform)
         {
-            Profiler.BeginSample("Update Planet Mesh");
+            
             if (surface.terrain.Material.mainTexture == null) // When we loose serialization we want to regenerate the texture
             {
                 surface.Dirty = true;
@@ -62,6 +65,7 @@ namespace CelestialBodies.Terrain
             {
                 if(surface.currentSurface == 0 || surface.TerrainFaces == null)
                     surface.InitializeSurface(transform);
+                
                 var finishedSurface = surface.GenerateMesh();
                 surface.GenerateColor();
                 if(Application.isPlaying) 
@@ -71,9 +75,7 @@ namespace CelestialBodies.Terrain
                     surface.Dirty = false;
                 }
             }
-            
             surface.AssignMesh();
-            Profiler.EndSample();
         }
         
         internal static void Dirty(this ref Surface surface)
@@ -89,6 +91,8 @@ namespace CelestialBodies.Terrain
         
         internal static bool GenerateMesh(this ref Surface surface)
         {
+            if (surface.currentSurface == -1)
+                return false;
             var iterations = 1;
             if (!Application.isPlaying)
             {
@@ -100,7 +104,7 @@ namespace CelestialBodies.Terrain
             {
                 if (surface.currentSurface > surface.TerrainFaces.Length - 1)
                 {
-                    surface.currentSurface = 0;
+                    surface.currentSurface = -1;
                     return true;
                 }
                 
@@ -144,7 +148,13 @@ namespace CelestialBodies.Terrain
             var subdivision = surface.subdivisions;
             if (surface.meshFilters == null || surface.meshFilters.Length == 0)
             {
+                surface.CleanUpMeshes();
                 surface.meshFilters = new MeshFilter[6 * (subdivision * subdivision)];
+            }
+
+            if (surface.MeshRenderers == null || surface.MeshRenderers.Length == 0)
+            {
+                surface.MeshRenderers = new MeshRenderer[6 * (subdivision * subdivision)];
             }
             
             surface.TerrainFaces = new TerrainFace[6 * (subdivision * subdivision)];
@@ -177,13 +187,14 @@ namespace CelestialBodies.Terrain
 
         internal static void LazyMeshInitialization(this Surface surface, Transform transform)
         {
+            Debug.Log("Initialize");
             for (int i = 0; i < 6 * (surface.subdivisions * surface.subdivisions); i++)
             {
                 if (surface.meshFilters[i] == null)
                 {
                     GameObject planetObject = new GameObject("mesh");
                     planetObject.transform.parent = transform;
-                    planetObject.AddComponent<MeshRenderer>();
+                    surface.MeshRenderers[i] = planetObject.AddComponent<MeshRenderer>();
                     surface.meshFilters[i] = planetObject.AddComponent<MeshFilter>();
                     surface.meshFilters[i].sharedMesh = new Mesh();
                 }
@@ -209,8 +220,10 @@ namespace CelestialBodies.Terrain
 
             if (Application.isPlaying)
             {
+                Profiler.BeginSample("Update Planet Mesh");
                 terrainFace.TerrainMeshData.CurrentThread = new Thread(() => CalculateFaceSynchronous(terrainFace, resolution));
                 terrainFace.TerrainMeshData.CurrentThread.Start();
+                Profiler.EndSample();
             }
             else
             {
@@ -443,16 +456,11 @@ namespace CelestialBodies.Terrain
         {
             get
             {
-                if (!(meshRenderers != null && meshRenderers.Length != 0))
-                {
-                    meshRenderers = new MeshRenderer[meshFilters.Length];
-                    for (var i = 0; i < meshFilters.Length; i++)
-                    {
-                        meshRenderers[i] = meshFilters[i].GetComponent<MeshRenderer>();
-                    }
-                }
-
                 return meshRenderers;
+            }
+            set
+            {
+                meshRenderers = value;
             }
         }
 

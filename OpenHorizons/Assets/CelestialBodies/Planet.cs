@@ -3,6 +3,7 @@ using CelestialBodies.Clouds.Rendering;
 using CelestialBodies.Terrain;
 using CelestialBodies.Sky;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace CelestialBodies
 {
@@ -34,14 +35,17 @@ namespace CelestialBodies
 
         void UpdateAtmosphereEffect()
         {
+            var LODMesh = sky.GetLodMesh(transform).gameObject;
             if (sky.atmosphere.Enabled && sky.atmosphere.Visible)
             {
-                sky.GetLodMesh(transform).gameObject.SetActive(false);
+                if(LODMesh.activeInHierarchy)
+                    LODMesh.SetActive(false);
                 AtmosphereRenderPass.RegisterEffect(this);
             }
             else
             {
-                sky.GetLodMesh(transform).gameObject.SetActive(true);
+                if(!LODMesh.activeInHierarchy)
+                    LODMesh.SetActive(true);
                 AtmosphereRenderPass.RemoveEffect(this);
             }
         }
@@ -49,17 +53,7 @@ namespace CelestialBodies
         private void Update()
         {
             VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, surface.shape.Radius);
-            try
-            {
-                surface.SmartUpdate(transform);
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("An error was thrown resting");
-                surface.CleanUpMeshes();
-                surface.InitializeSurface(this.transform);
-            }
-            
+            surface.SmartUpdate(transform);
         }
 
         private void LateUpdate()
@@ -99,10 +93,15 @@ namespace CelestialBodies
             Quaternion currentRotation = transform.rotation;
             transform.rotation = Quaternion.Euler(0f,0f,0f);
             Bounds bounds = new Bounds(transform.position, Vector3.zero);
-            foreach(Renderer renderer in surface.MeshRenderers)
+            if (surface.MeshRenderers != null)
             {
-                bounds.Encapsulate(renderer.bounds);
+                foreach (Renderer renderer in surface.MeshRenderers)
+                {
+                    if (renderer != null)
+                        bounds.Encapsulate(renderer.bounds);
+                }
             }
+
             Vector3 localCenter = bounds.center - this.transform.position;
             bounds.center = localCenter;
             transform.rotation = currentRotation;
