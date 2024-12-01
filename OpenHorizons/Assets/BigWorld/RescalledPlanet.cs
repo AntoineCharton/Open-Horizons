@@ -17,11 +17,6 @@ namespace BigWorld
         private double _size;
         private double _width;
 
-        private void Start()
-        {
-
-        }
-
         void CalculateWidth()
         {
             var currentScale = planet.transform.localScale;

@@ -14,8 +14,8 @@ namespace BigWorld
         [SerializeField] private float rescaleMultiplicator = 11;
         private double _size;
         private double _width;
-
-        private void Start()
+        
+        void CalculateWidth()
         {
             var currentScale = transform.localScale;
             transform.localScale = Vector3.one;
@@ -29,7 +29,7 @@ namespace BigWorld
             {
                 referenceTransform = FindAnyObjectByType<ReferenceTransform>();
             }
-
+            CalculateWidth();
             if (gameObject != null)
             {
                 _size = CalculateObjectPixelWidth(DoubleVector3.Distance(referenceTransform.UniversePosition, position),
