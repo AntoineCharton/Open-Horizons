@@ -1,3 +1,4 @@
+using System;
 using CelestialBodies.Clouds.Rendering;
 using CelestialBodies.Terrain;
 using CelestialBodies.Sky;
@@ -11,6 +12,13 @@ namespace CelestialBodies
         [SerializeField] private Surface surface;
         [SerializeField] internal AtmosphereGenerator sky;
         [SerializeField] private Cloud cloud;
+
+        private void Awake()
+        {
+            surface.CleanUpMeshes();
+            surface.InitializeSurface(transform);
+            surface.SmartUpdate(transform);
+        }
 
         private void OnEnable()
         {
@@ -27,7 +35,10 @@ namespace CelestialBodies
         void UpdateAtmosphereEffect()
         {
             if (sky.atmosphere.Enabled && sky.atmosphere.Visible)
+            {
+                sky.GetLodMesh(transform).gameObject.SetActive(false);
                 AtmosphereRenderPass.RegisterEffect(this);
+            }
             else
             {
                 sky.GetLodMesh(transform).gameObject.SetActive(true);
@@ -38,10 +49,24 @@ namespace CelestialBodies
         private void Update()
         {
             VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, surface.shape.Radius);
-            surface.LazyUpdate(transform);
-            sky.LazyUpdate(transform, surface.shape.Radius);
+            try
+            {
+                surface.SmartUpdate(transform);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("An error was thrown resting");
+                surface.CleanUpMeshes();
+                surface.InitializeSurface(this.transform);
+            }
+            
         }
-        
+
+        private void LateUpdate()
+        {
+            sky.SmartUpdate(transform, surface.shape.Radius);
+        }
+
         private void OnDisable()
         {
             sky.CleanUpAtmosphere(this);

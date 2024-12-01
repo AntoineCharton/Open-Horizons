@@ -19,6 +19,11 @@ namespace BigWorld
 
         private void Start()
         {
+
+        }
+
+        void CalculateWidth()
+        {
             var currentScale = planet.transform.localScale;
             planet.transform.localScale = Vector3.one;
             _width = planet.GetBounds().size.z;
@@ -31,6 +36,8 @@ namespace BigWorld
             {
                 referenceTransform = FindAnyObjectByType<ReferenceTransform>();
             }
+
+            CalculateWidth();
 
             if (gameObject != null)
             {

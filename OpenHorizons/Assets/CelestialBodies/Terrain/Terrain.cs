@@ -1,7 +1,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.Rendering;
@@ -32,8 +31,27 @@ namespace CelestialBodies.Terrain
                 }
             }
         }
+
+        internal static void CleanUpMeshes(this ref Surface surface)
+        {
+            for (var i = 0; i < surface.MeshRenderers.Length; i++)
+            {
+                if(surface.MeshRenderers[i] != null)
+                {
+                    if (Application.isPlaying)
+                        GameObject.Destroy(surface.MeshRenderers[i].gameObject);
+                    else
+                    {
+                        GameObject.DestroyImmediate(surface.MeshRenderers[i].gameObject);
+                    }
+                }
+            }
+
+            surface.ResetRenderers();
+            surface.TerrainFaces = null;
+        }
         
-        internal static void LazyUpdate(this ref Surface surface, Transform transform)
+        internal static void SmartUpdate(this ref Surface surface, Transform transform)
         {
             Profiler.BeginSample("Update Planet Mesh");
             if (surface.terrain.Material.mainTexture == null) // When we loose serialization we want to regenerate the texture
@@ -438,6 +456,12 @@ namespace CelestialBodies.Terrain
             }
         }
 
+        public void ResetRenderers()
+        {
+            meshFilters = null;
+            meshRenderers = null;
+        }
+
         [SerializeField] internal Terrain terrain;
         [SerializeField] internal Shape shape;
 
@@ -454,8 +478,6 @@ namespace CelestialBodies.Terrain
         internal bool IsGeneratingVertex;
         internal bool IsDoneGeneratingVertex;
         internal Thread CurrentThread;
-
-
     }
 
     struct TerrainFace

@@ -98,7 +98,7 @@ namespace CelestialBodies.Sky
             }
         }
 
-        public static void LazyUpdate(this ref AtmosphereGenerator atmosphereGenerator, Transform transform, float radius)
+        public static void SmartUpdate(this ref AtmosphereGenerator atmosphereGenerator, Transform transform, float radius)
         {
             if (atmosphereGenerator.material == null || atmosphereGenerator.sun == null)
             {

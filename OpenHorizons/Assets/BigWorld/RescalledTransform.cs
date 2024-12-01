@@ -39,7 +39,7 @@ namespace BigWorld
             if (referenceTransform is not null)
             {
                 var distance = DoubleVector3.Distance(referenceTransform.UniversePosition, position);
-                if (distance < 20000)
+                if (distance < 150000)
                 {
                     transform.localScale = Vector3.one;
                     transform.position = new Vector3((float)(position.X - referenceTransform.referencePosition.X),
@@ -52,7 +52,7 @@ namespace BigWorld
                         Quaternion.identity, new DoubleVector3(1, 1, 1), position);
                     transform.position =
                         (new Vector3((float)localPosition.X, (float)localPosition.Y, (float)localPosition.Z)
-                            .normalized * 18500) + referenceTransform.transform.position;
+                            .normalized * 148500) + referenceTransform.transform.position;
                     float targetSize = (float)_size * rescaleMultiplicator;
                     float currentSize = planet.bounds.size.z;
                     Vector3 scale = transform.localScale;
