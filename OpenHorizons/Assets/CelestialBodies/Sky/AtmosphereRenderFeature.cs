@@ -15,7 +15,6 @@ namespace CelestialBodies.Sky
         struct SortedEffect
         {
             public IAtmosphereEffect effect;
-            public float distanceToEffect;
         }
 
 
@@ -55,16 +54,12 @@ namespace CelestialBodies.Sky
                 return;
             // Perform culling of active effects
             cameraPlanes = GeometryUtility.CalculateFrustumPlanes(camera);
-
-            Vector3 viewPos = camera.transform.position;
+            
             if (currentActiveEffect.IsVisible(cameraPlanes))
             {
-                float dstToSurface = currentActiveEffect.DistToAtmosphere(viewPos);
-
                 visibleEffects = new SortedEffect
                 {
                     effect = currentActiveEffect,
-                    distanceToEffect = dstToSurface
                 };
             }
         }
@@ -148,13 +143,6 @@ namespace CelestialBodies.Sky
         /// Is the effect visible to the provided camer frustum planes?
         /// </summary>
         public bool IsVisible(Plane[] cameraPlanes);
-
-        /// <summary>
-        /// Returns absolute distance from point to atmosphere shell
-        /// </summary>
-        public float DistToAtmosphere(Vector3 pos);
-
-        public bool IsActive();
 
         public GameObject GameObject { get; }
     }

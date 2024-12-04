@@ -68,12 +68,17 @@ namespace CelestialBodies.Terrain
                 
                 var finishedSurface = surface.GenerateMesh();
                 surface.GenerateColor();
-                if(Application.isPlaying) 
+                if(Application.isPlaying)
                     surface.Dirty = !finishedSurface;
                 else
                 {
                     surface.Dirty = false;
                 }
+            } else if (surface.DirtyFaceCount)
+            {
+                surface.currentSurface = surface.closestFace;
+                surface.GenerateMesh();
+                surface.DirtyFaceCount = false;
             }
             surface.AssignMesh();
         }
@@ -82,6 +87,12 @@ namespace CelestialBodies.Terrain
         {
             surface.Dirty = true;
             surface.currentSurface = 0;
+        }
+        
+        internal static void DirtySurface(this ref Surface surface)
+        {
+            surface.DirtyFaceCount = true;
+            surface.currentSurface = surface.closestFace;
         }
         
         internal static void GenerateColor(this Surface surface)
@@ -104,13 +115,22 @@ namespace CelestialBodies.Terrain
             {
                 if (surface.currentSurface > surface.TerrainFaces.Length - 1)
                 {
+                    surface.allFacesGenerated = true;
                     surface.currentSurface = -1;
                     return true;
                 }
                 
-                var isDoubleResolution = surface.currentSurface == 0;
+                var isDoubleResolution = surface.closestFace == surface.currentSurface;
                 surface.TerrainFaces[surface.currentSurface].GeneratePlanet(isDoubleResolution);
                 surface.currentSurface++;
+
+                if (surface.DirtyFaceCount)
+                {
+                    surface.currentSurface = surface.previousClosestFace;
+                    surface.TerrainFaces[surface.currentSurface].GeneratePlanet(false);
+                    surface.currentSurface = -1;
+                    return true;
+                }
                 
                 surface.ColorGenerator.UpdateElevation(surface.ShapeGenerator.ElevationMinMax);
             }
@@ -183,11 +203,12 @@ namespace CelestialBodies.Terrain
                         surface.minResolution, surface.highResolution,rowID, lineID, subdivision, direction[i]);
                 }
             }
+            
+            Debug.Log("Initialize");
         }
 
         internal static void LazyMeshInitialization(this Surface surface, Transform transform)
         {
-            Debug.Log("Initialize");
             for (int i = 0; i < 6 * (surface.subdivisions * surface.subdivisions); i++)
             {
                 if (surface.meshFilters[i] == null)
@@ -227,7 +248,7 @@ namespace CelestialBodies.Terrain
             }
             else
             {
-                CalculateFaceParallel(terrainFace, Mathf.Min(resolution, 64));
+                CalculateFaceParallel(terrainFace, Mathf.Min(resolution, 32));
             }
         }
 
@@ -448,7 +469,9 @@ namespace CelestialBodies.Terrain
         internal int currentSurface;
         internal ShapeGenerator ShapeGenerator;
         internal ColorGenerator ColorGenerator;
-
+        internal int closestFace;
+        internal int previousClosestFace;
+        internal bool allFacesGenerated;
         [SerializeField] internal MeshFilter[] meshFilters;
         [SerializeField] private MeshRenderer[] meshRenderers;
 
@@ -476,6 +499,7 @@ namespace CelestialBodies.Terrain
         internal TerrainFace[] TerrainFaces;
 
         internal bool Dirty;
+        internal bool DirtyFaceCount;
     }
 
     class TerrainMeshData

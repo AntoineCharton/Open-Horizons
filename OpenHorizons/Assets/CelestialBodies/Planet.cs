@@ -1,9 +1,7 @@
-using System;
 using CelestialBodies.Clouds.Rendering;
 using CelestialBodies.Terrain;
 using CelestialBodies.Sky;
 using UnityEngine;
-using UnityEngine.Profiling;
 
 namespace CelestialBodies
 {
@@ -59,6 +57,27 @@ namespace CelestialBodies
         private void LateUpdate()
         {
             sky.SmartUpdate(transform, surface.shape.Radius);
+            if(surface.allFacesGenerated == false)
+                return;
+            
+            var closestFace = 0;
+            var closestDistance = float.MaxValue;
+            for (var i = 0; i < surface.TerrainFaces.Length; i++)
+            {
+                var currentDistance = Vector3.Distance(Camera.main.transform.position, surface.MeshRenderers[i].bounds.center);
+                if (currentDistance < closestDistance)
+                {
+                    closestDistance = currentDistance;
+                    closestFace = i;
+                }
+            }
+
+            if (surface.closestFace != closestFace)
+            {
+                surface.previousClosestFace = surface.closestFace;
+                surface.closestFace = closestFace;
+                surface.DirtySurface();
+            }
         }
 
         private void OnDisable()
@@ -117,16 +136,6 @@ namespace CelestialBodies
         public bool IsVisible(Plane[] cameraPlanes)
         {
             return sky.IsVisible(cameraPlanes, transform);
-        }
-
-        public float DistToAtmosphere(Vector3 pos)
-        {
-            return sky.DistToAtmosphere(transform, pos);
-        }
-
-        public bool IsActive()
-        {
-            return sky.atmosphere.Enabled && sky.atmosphere.Visible;
         }
 
         public GameObject GameObject

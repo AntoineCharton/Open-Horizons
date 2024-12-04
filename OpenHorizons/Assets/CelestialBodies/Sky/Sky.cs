@@ -80,12 +80,6 @@ namespace CelestialBodies.Sky
             material.SetFloat("_ZWrite", enabled ? 0 : 1);
         }
 
-        public static float DistToAtmosphere(this AtmosphereGenerator atmosphereGenerator, Transform transform,
-            Vector3 pos)
-        {
-            return Math.Abs((pos - transform.position).magnitude - atmosphereGenerator.AtmosphereSize);
-        }
-
         public static void CleanUpAtmosphere(this ref AtmosphereGenerator atmosphereGenerator,
             IAtmosphereEffect atmosphereEffect)
         {

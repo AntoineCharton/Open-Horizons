@@ -504,10 +504,6 @@ namespace CelestialBodies.Clouds.Rendering
                 Vector3 cameraPosPS = camera.transform.position - new Vector3(0.0f, -actualEarthRad * _transform.lossyScale.x, 0.0f);
                 _cloudsMaterial.SetFloat(CloudnearPlane, max(GetCloudNearPlane(cameraPosPS, bottomAltitude, highestAltitude), camera.nearClipPlane));
 
-                // Custom cloud map is not supported yet.
-                //float lowerCloudRadius = (bottomAltitude + highestAltitude) * 0.5f - actualEarthRad;
-                //cloudsMaterial.SetFloat(normalizationFactor, Mathf.Sqrt((earthRad + lowerCloudRadius) * (earthRad + lowerCloudRadius) - earthRad * actualEarthRad));
-
                 PrepareCustomLutData();
             }
 
