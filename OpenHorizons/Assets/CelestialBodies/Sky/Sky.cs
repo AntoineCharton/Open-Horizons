@@ -47,6 +47,23 @@ namespace CelestialBodies.Sky
 
             return atmosphereGenerator.material;
         }
+        
+        internal static void UpdateAtmosphereEffect(this ref AtmosphereGenerator sky, IAtmosphereEffect atmosphereEffect)
+        {
+            var LODMesh = sky.GetLodMesh(atmosphereEffect.GameObject.transform).gameObject;
+            if (sky.atmosphere.Enabled && sky.atmosphere.Visible)
+            {
+                if(LODMesh.activeInHierarchy)
+                    LODMesh.SetActive(false);
+                AtmosphereRenderPass.RegisterEffect(atmosphereEffect);
+            }
+            else
+            {
+                if(!LODMesh.activeInHierarchy)
+                    LODMesh.SetActive(true);
+                AtmosphereRenderPass.RemoveEffect(atmosphereEffect);
+            }
+        }
 
         public static MeshRenderer GetLodMesh(this ref AtmosphereGenerator atmosphereGenerator, Transform transform)
         {

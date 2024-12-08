@@ -1,3 +1,4 @@
+using System.Threading;
 using CelestialBodies.Clouds.Rendering;
 using CelestialBodies.Terrain;
 using CelestialBodies.Sky;
@@ -12,40 +13,16 @@ namespace CelestialBodies
         [SerializeField] internal AtmosphereGenerator sky;
         [SerializeField] private Cloud cloud;
 
-        private void Awake()
-        {
-            surface.CleanUpMeshes();
-            surface.InitializeSurface(transform);
-            surface.SmartUpdate(transform);
-        }
-
         private void OnEnable()
         {
-            UpdateAtmosphereEffect();
+            sky.UpdateAtmosphereEffect(this);
             VolumetricCloudsUrp.VolumetricCloudsPass.RegisterPlanet(transform);
         }
 
         private void OnValidate()
         {
-            UpdateAtmosphereEffect();
+            sky.UpdateAtmosphereEffect(this);
             surface.Dirty();
-        }
-
-        void UpdateAtmosphereEffect()
-        {
-            var LODMesh = sky.GetLodMesh(transform).gameObject;
-            if (sky.atmosphere.Enabled && sky.atmosphere.Visible)
-            {
-                if(LODMesh.activeInHierarchy)
-                    LODMesh.SetActive(false);
-                AtmosphereRenderPass.RegisterEffect(this);
-            }
-            else
-            {
-                if(!LODMesh.activeInHierarchy)
-                    LODMesh.SetActive(true);
-                AtmosphereRenderPass.RemoveEffect(this);
-            }
         }
 
         private void Update()
@@ -57,27 +34,7 @@ namespace CelestialBodies
         private void LateUpdate()
         {
             sky.SmartUpdate(transform, surface.shape.Radius);
-            if(surface.allFacesGenerated == false)
-                return;
-            
-            var closestFace = 0;
-            var closestDistance = float.MaxValue;
-            for (var i = 0; i < surface.TerrainFaces.Length; i++)
-            {
-                var currentDistance = Vector3.Distance(Camera.main.transform.position, surface.MeshRenderers[i].bounds.center);
-                if (currentDistance < closestDistance)
-                {
-                    closestDistance = currentDistance;
-                    closestFace = i;
-                }
-            }
-
-            if (surface.closestFace != closestFace)
-            {
-                surface.previousClosestFace = surface.closestFace;
-                surface.closestFace = closestFace;
-                surface.DirtySurface();
-            }
+            surface.UpdateMeshResolution();
         }
 
         private void OnDisable()
@@ -94,7 +51,7 @@ namespace CelestialBodies
         {
             if(sky.atmosphere.Visible != isActive)
                 sky.atmosphere.Visible = isActive;
-            UpdateAtmosphereEffect();
+            sky.UpdateAtmosphereEffect(this);
         }
 
         public void CloudsActive(bool isActive)
@@ -109,23 +66,7 @@ namespace CelestialBodies
 
         public Bounds GetBounds()
         {
-            Quaternion currentRotation = transform.rotation;
-            transform.rotation = Quaternion.Euler(0f,0f,0f);
-            Bounds bounds = new Bounds(transform.position, Vector3.zero);
-            if (surface.MeshRenderers != null)
-            {
-                foreach (Renderer renderer in surface.MeshRenderers)
-                {
-                    if (renderer != null)
-                        bounds.Encapsulate(renderer.bounds);
-                }
-            }
-
-            Vector3 localCenter = bounds.center - this.transform.position;
-            bounds.center = localCenter;
-            transform.rotation = currentRotation;
-
-            return bounds;
+            return surface.GetBounds(transform);
         }
 
         public Material GetMaterial(Shader atmosphereShader)
@@ -142,7 +83,5 @@ namespace CelestialBodies
         {
             get => gameObject;
         }
-
     }
-
 }

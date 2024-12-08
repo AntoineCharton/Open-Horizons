@@ -23,6 +23,9 @@ namespace CelestialBodies.Terrain
 
         internal static void Cleanup(this Surface surface)
         {
+            if(Application.isPlaying)
+                surface.TerrainMeshThreadCalculation.TerminateThread();
+            
             if (surface.meshFilters != null && !Application.isPlaying)
             {
                 for (var i = 0; i < surface.meshFilters.Length; i++)
@@ -32,7 +35,27 @@ namespace CelestialBodies.Terrain
             }
         }
 
-        internal static void CleanUpMeshes(this ref Surface surface)
+        internal static Bounds GetBounds(this Surface surface, Transform transform)
+        {
+            Quaternion currentRotation = transform.rotation;
+            transform.rotation = Quaternion.Euler(0f,0f,0f);
+            Bounds bounds = new Bounds(transform.position, Vector3.zero);
+            if (surface.MeshRenderers != null)
+            {
+                foreach (Renderer renderer in surface.MeshRenderers)
+                {
+                    if (renderer != null)
+                        bounds.Encapsulate(renderer.bounds);
+                }
+            }
+
+            Vector3 localCenter = bounds.center - transform.position;
+            bounds.center = localCenter;
+            transform.rotation = currentRotation;
+            return bounds;
+        }
+
+        private static void CleanUpMeshes(this ref Surface surface)
         {
             if (surface.MeshRenderers != null)
             {
@@ -41,10 +64,10 @@ namespace CelestialBodies.Terrain
                     if (surface.MeshRenderers[i] != null)
                     {
                         if (Application.isPlaying)
-                            GameObject.Destroy(surface.MeshRenderers[i].gameObject);
+                            Object.Destroy(surface.MeshRenderers[i].gameObject);
                         else
                         {
-                            GameObject.DestroyImmediate(surface.MeshRenderers[i].gameObject);
+                            Object.DestroyImmediate(surface.MeshRenderers[i].gameObject);
                         }
                     }
                 }
@@ -53,20 +76,88 @@ namespace CelestialBodies.Terrain
             surface.ResetRenderers();
             surface.TerrainFaces = null;
         }
+
+        internal static void UpdateMeshResolution(this ref Surface surface)
+        {
+            if(surface.AllFacesGenerated == false)
+                return;
+            
+            var closestFaces = new int[4];
+            var closestDistances = new float[4];
+            Array.Fill(closestDistances, float.MaxValue);
+            Array.Fill(closestFaces, -1);
+            Profiler.BeginSample("Get center");
+            var cameraPosition = Camera.main.transform.position;
+            for (var i = 0; i < surface.TerrainFaces.Length; i++)
+            {
+                var currentDistance = Vector3.Distance(cameraPosition, surface.MeshRenderers[i].bounds.center);
+                // Check if the current number is smaller than the largest number in resultArray
+                for (int j = 0; j < 4; j++)
+                {
+                    if (currentDistance < closestDistances[j])
+                    {
+                        // Shift the larger numbers to the right to make room
+                        for (int k = 3; k > j; k--)
+                        {
+                            closestDistances[k] = closestDistances[k - 1];
+                            closestFaces[k] = closestFaces[k - 1];
+                        }
+                        closestDistances[j] = currentDistance;
+                        closestFaces[j] = i;
+                        break;
+                    }
+                }
+            }
+
+            if (IsClosestFacesChanged(ref surface))
+            {
+                surface.PreviousClosestFaces = surface.ClosestFaces;
+                surface.ClosestFaces = closestFaces;
+                surface.DirtySurface();
+            }
+            
+            Profiler.EndSample();
+            
+            
+            bool IsClosestFacesChanged(ref Surface surface)
+            {
+                for (var i = 0; i < surface.ClosestFaces.Length; i++)
+                {
+                    if (surface.ClosestFaces[i] != closestFaces[i])
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
         
         internal static void SmartUpdate(this ref Surface surface, Transform transform)
         {
-            
             if (surface.terrain.Material.mainTexture == null) // When we loose serialization we want to regenerate the texture
             {
                 surface.Dirty = true;
             }
+            
             if (surface.Dirty)
             {
-                if(surface.currentSurface == 0 || surface.TerrainFaces == null)
+                if (Application.isPlaying && surface.TerrainMeshThreadCalculation == null)
+                {
+                    surface.CleanUpMeshes();
+                    var meshThreadCalculation = new TerrainMeshThreadCalculation();
+                    surface.TerrainMeshThreadCalculation = meshThreadCalculation;
+                    Thread thread = new Thread(() =>
+                    {
+                        meshThreadCalculation.MeshThread();
+                    });
+                    thread.Start();
+                }
+                
+                if(surface.CurrentSurface == 0 || surface.TerrainFaces == null)
                     surface.InitializeSurface(transform);
                 
-                var finishedSurface = surface.GenerateMesh();
+                var finishedSurface = surface.GenerateMesh(surface.TerrainMeshThreadCalculation);
                 surface.GenerateColor();
                 if(Application.isPlaying)
                     surface.Dirty = !finishedSurface;
@@ -74,11 +165,16 @@ namespace CelestialBodies.Terrain
                 {
                     surface.Dirty = false;
                 }
-            } else if (surface.DirtyFaceCount)
+            } else if (surface.DirtyFaceResolution)
             {
-                surface.currentSurface = surface.closestFace;
-                surface.GenerateMesh();
-                surface.DirtyFaceCount = false;
+                surface.CurrentSurface = surface.ClosestFaces[surface.CurrentClosestFaceUpdate];
+                surface.GenerateMesh(surface.TerrainMeshThreadCalculation);
+                surface.CurrentClosestFaceUpdate++;
+                if (surface.CurrentClosestFaceUpdate >= surface.ClosestFaces.Length)
+                {
+                    surface.CurrentClosestFaceUpdate = 0;
+                    surface.DirtyFaceResolution = false;
+                }
             }
             surface.AssignMesh();
         }
@@ -86,49 +182,74 @@ namespace CelestialBodies.Terrain
         internal static void Dirty(this ref Surface surface)
         {
             surface.Dirty = true;
-            surface.currentSurface = 0;
+            surface.CurrentSurface = 0;
         }
         
-        internal static void DirtySurface(this ref Surface surface)
+        private static void DirtySurface(this ref Surface surface)
         {
-            surface.DirtyFaceCount = true;
-            surface.currentSurface = surface.closestFace;
+            surface.DirtyFaceResolution = true;
+            surface.CurrentSurface = surface.ClosestFaces[0];
+            surface.CurrentClosestFaceUpdate = 0;
         }
         
-        internal static void GenerateColor(this Surface surface)
+        private static void GenerateColor(this Surface surface)
         {
             surface.ColorGenerator.GenerateColor();
         }
         
-        internal static bool GenerateMesh(this ref Surface surface)
+        private static bool GenerateMesh(this ref Surface surface, TerrainMeshThreadCalculation terrainCalculator)
         {
-            if (surface.currentSurface == -1)
+            if (surface.CurrentSurface == -1)
                 return false;
             var iterations = 1;
             if (!Application.isPlaying)
             {
                 iterations = surface.TerrainFaces.Length;
-                surface.currentSurface = 0;
+                surface.CurrentSurface = 0;
             }
             
             for (var i = 0; i < iterations; i++)
             {
-                if (surface.currentSurface > surface.TerrainFaces.Length - 1)
+                if (surface.CurrentSurface > surface.TerrainFaces.Length - 1)
                 {
-                    surface.allFacesGenerated = true;
-                    surface.currentSurface = -1;
+                    surface.AllFacesGenerated = true;
+                    surface.CurrentSurface = -1;
                     return true;
                 }
-                
-                var isDoubleResolution = surface.closestFace == surface.currentSurface;
-                surface.TerrainFaces[surface.currentSurface].GeneratePlanet(isDoubleResolution);
-                surface.currentSurface++;
 
-                if (surface.DirtyFaceCount)
+                var isDoubleResolution = false;
+                for (var j = 0; j < surface.ClosestFaces.Length; j++)
                 {
-                    surface.currentSurface = surface.previousClosestFace;
-                    surface.TerrainFaces[surface.currentSurface].GeneratePlanet(false);
-                    surface.currentSurface = -1;
+                    if (surface.ClosestFaces[j] == surface.CurrentSurface)
+                    {
+                        isDoubleResolution = true;
+                    }
+                }
+                
+                if (!surface.TerrainFaces[surface.CurrentSurface].GeneratePlanet(terrainCalculator, isDoubleResolution))
+                    return false;
+                surface.CurrentSurface++;
+
+                if (surface.DirtyFaceResolution)
+                {
+                    for (var j = 0; j < surface.PreviousClosestFaces.Length; j++)
+                    {
+                        var lowerFaceResolution = true;
+                        for (var k = 0; k < surface.ClosestFaces.Length; k++)
+                        {
+                            if (surface.ClosestFaces[k] == surface.PreviousClosestFaces[j])
+                                lowerFaceResolution = false;
+                        }
+
+                        if (lowerFaceResolution)
+                        {
+                            surface.CurrentSurface = surface.PreviousClosestFaces[j];
+                            if (!surface.TerrainFaces[surface.CurrentSurface].GeneratePlanet(terrainCalculator, false))
+                                return false;
+                            surface.CurrentSurface = -1;
+                        }
+                    }
+
                     return true;
                 }
                 
@@ -138,12 +259,12 @@ namespace CelestialBodies.Terrain
             return false;
         }
         
-        internal static void AssignMesh(this ref Surface surface)
+        private static void AssignMesh(this ref Surface surface)
         {
             for (var i = 0; i < surface.TerrainFaces.Length; i++)
             {
                 if (surface.TerrainFaces[i].Mesh == null)
-                    UnityEngine.Debug.Log("Mesh Shouldn't be null");
+                    Debug.Log("Mesh Shouldn't be null");
                 else
                 {
                     if (!surface.TerrainFaces[i].TerrainMeshData.IsGeneratingVertex &&
@@ -161,10 +282,12 @@ namespace CelestialBodies.Terrain
             }
         }
         
-        internal static void InitializeSurface(this ref Surface surface, Transform transform)
+        private static void InitializeSurface(this ref Surface surface, Transform transform)
         {
             surface.ShapeGenerator = new ShapeGenerator(surface.shape);
             surface.ColorGenerator = new ColorGenerator(surface.terrain);
+            surface.ClosestFaces = new int[4];
+            surface.PreviousClosestFaces = new int[4];
             var subdivision = surface.subdivisions;
             if (surface.meshFilters == null || surface.meshFilters.Length == 0)
             {
@@ -207,7 +330,7 @@ namespace CelestialBodies.Terrain
             Debug.Log("Initialize");
         }
 
-        internal static void LazyMeshInitialization(this Surface surface, Transform transform)
+        private static void LazyMeshInitialization(this Surface surface, Transform transform)
         {
             for (int i = 0; i < 6 * (surface.subdivisions * surface.subdivisions); i++)
             {
@@ -222,18 +345,18 @@ namespace CelestialBodies.Terrain
             }
         }
         
-        internal static void GenerateColor(this ColorGenerator colorGenerator)
+        private static void GenerateColor(this ColorGenerator colorGenerator)
         {
             colorGenerator.UpdateColors();
         }
         
-        internal static void GeneratePlanet(this TerrainFace terrainFace, bool doubleResolution)
+        private static bool GeneratePlanet(this TerrainFace terrainFace, TerrainMeshThreadCalculation terrainCalculator, bool doubleResolution)
         {
 
             var resolution = terrainFace.MinResolution;
             if (doubleResolution)
                 resolution = terrainFace.HighResolution;
-
+            
             if (terrainFace.TerrainMeshData.CurrentThread != null)
             {
                 terrainFace.TerrainMeshData.CurrentThread.Abort();
@@ -242,14 +365,18 @@ namespace CelestialBodies.Terrain
             if (Application.isPlaying)
             {
                 Profiler.BeginSample("Update Planet Mesh");
-                terrainFace.TerrainMeshData.CurrentThread = new Thread(() => CalculateFaceSynchronous(terrainFace, resolution));
-                terrainFace.TerrainMeshData.CurrentThread.Start();
+                if (!terrainCalculator.SubmitCalculation(terrainFace, doubleResolution))
+                    return false;
+                //terrainFace.TerrainMeshData.CurrentThread = new Thread(() => CalculateFaceSynchronous(terrainFace, resolution));
+                //terrainFace.TerrainMeshData.CurrentThread.Start();
                 Profiler.EndSample();
             }
             else
             {
                 CalculateFaceParallel(terrainFace, Mathf.Min(resolution, 32));
             }
+
+            return true;
         }
 
         private static void CalculateFace(ref TerrainFace terrainFace, int resolution, int y)
@@ -286,7 +413,7 @@ namespace CelestialBodies.Terrain
         private static void InitializeFace(ref TerrainFace terrainFace, int resolution)
         {
             if (terrainFace.TerrainMeshData.Vertices == null ||
-                terrainFace.TerrainMeshData.Vertices.Length != resolution)
+                terrainFace.TerrainMeshData.Vertices.Length != resolution * resolution)
             {
                 terrainFace.TerrainMeshData.Vertices = new Vector3[resolution * resolution];
                 terrainFace.TerrainMeshData.Normals = new Vector3[resolution * resolution];
@@ -310,7 +437,8 @@ namespace CelestialBodies.Terrain
             for(var y = 0; y < resolution; y ++)
             {
                 CalculateFace(ref terrainFace, resolution, y);
-            };
+            }
+
             FinishFaceCalculation(ref terrainFace);
         }
 
@@ -356,7 +484,7 @@ namespace CelestialBodies.Terrain
             return normals;
         }
 
-        internal static float EvaluateRigidNoise(this NoiseSettings noiseSettings, Noise noise, Vector3 point)
+        private static float EvaluateRigidNoise(this NoiseSettings noiseSettings, Noise noise, Vector3 point)
         {
             var noiseValue = 0f;
             var frequency = noiseSettings.BaseRoughness;
@@ -378,7 +506,7 @@ namespace CelestialBodies.Terrain
             return noiseValue * noiseSettings.Strength;
         }
 
-        internal static float EvaluateSimpleNoise(NoiseSettings noiseSettings, Noise noise, Vector3 point)
+        private static float EvaluateSimpleNoise(NoiseSettings noiseSettings, Noise noise, Vector3 point)
         {
             float noiseValue = 0;
             float frequency = noiseSettings.BaseRoughness;
@@ -395,7 +523,7 @@ namespace CelestialBodies.Terrain
             return noiseValue * noiseSettings.Strength;
         }
 
-        internal static float Evaluate(this NoiseFilter noiseFilter, Vector3 position)
+        private static float Evaluate(this NoiseFilter noiseFilter, Vector3 position)
         {
             switch (noiseFilter.NoiseSettings.Filter)
             {
@@ -408,7 +536,7 @@ namespace CelestialBodies.Terrain
             }
         }
 
-        internal static Vector3 CalculatePointOnPlanet(this ref ShapeGenerator shapeGenerator, Vector3 pointOnUnitSphere)
+        private static Vector3 CalculatePointOnPlanet(this ref ShapeGenerator shapeGenerator, Vector3 pointOnUnitSphere)
         {
             float firstLayerValue = 0;
             float elevation = 0;
@@ -436,14 +564,14 @@ namespace CelestialBodies.Terrain
             return pointOnUnitSphere * elevation;
         }
         
-        internal static void UpdateElevation(this ref ColorGenerator colorGenerator, MinMax elevationMinMax)
+        private static void UpdateElevation(this ref ColorGenerator colorGenerator, MinMax elevationMinMax)
         {
             colorGenerator.Settings.Material.SetVector(ElevationMinMax, new Vector4(elevationMinMax.Min, elevationMinMax.Max));
             colorGenerator.Settings.Material.SetColor(OceanColor, colorGenerator.Settings.OceanColor);
             colorGenerator.Settings.Material.SetTexture(WaterNorm, colorGenerator.Settings.OceanNormals);
         }
 
-        internal static void UpdateColors(this ref ColorGenerator colorGenerator)
+        private static void UpdateColors(this ref ColorGenerator colorGenerator)
         {
             Color[] colors = new Color[colorGenerator.TextureResolution];
             for (int i = 0; i < colorGenerator.TextureResolution; i++)
@@ -458,6 +586,29 @@ namespace CelestialBodies.Terrain
             colorGenerator.Settings.Material.SetFloat(GroundTexBlend, colorGenerator.GroundTextureBlend);
             colorGenerator.Settings.Material.SetFloat(GroundSmooth, colorGenerator.GroundSmooth);
         }
+        
+        private static void MeshThread(this TerrainMeshThreadCalculation terrainMeshThreadCalculation)
+        {
+            if (terrainMeshThreadCalculation == null)
+            {
+                Debug.LogError("Thread Aborted terrain mesh is null");
+                return;
+            }
+
+            while (!terrainMeshThreadCalculation.IsTerminated)
+            {
+                if (terrainMeshThreadCalculation.SubmitedNewCalculation)
+                {
+                    terrainMeshThreadCalculation.SubmitedNewCalculation = false;
+                    terrainMeshThreadCalculation.IsCalculating = true;
+                    SurfaceBuilder.CalculateFaceSynchronous(terrainMeshThreadCalculation.TerrainFace, terrainMeshThreadCalculation.Resolution);
+                }
+                Thread.Sleep(1);
+                terrainMeshThreadCalculation.IsCalculating = false;
+            }
+            
+            Debug.Log("Thread succesfully disposed");
+        }
     }
     
     [Serializable]
@@ -465,13 +616,15 @@ namespace CelestialBodies.Terrain
     {
         [SerializeField, Range(3, 127)] internal int minResolution;
         [SerializeField, Range(3, 4096)] internal int highResolution;
-        [SerializeField, Range(1, 9)] internal int subdivisions;
-        internal int currentSurface;
+        [SerializeField, Range(1, 20)] internal int subdivisions;
+        internal int CurrentSurface;
         internal ShapeGenerator ShapeGenerator;
         internal ColorGenerator ColorGenerator;
-        internal int closestFace;
-        internal int previousClosestFace;
-        internal bool allFacesGenerated;
+        internal int CurrentClosestFaceUpdate;
+        internal int[] ClosestFaces;
+        internal int [] PreviousClosestFaces;
+        internal bool AllFacesGenerated;
+        internal TerrainMeshThreadCalculation TerrainMeshThreadCalculation;
         [SerializeField] internal MeshFilter[] meshFilters;
         [SerializeField] private MeshRenderer[] meshRenderers;
 
@@ -499,7 +652,7 @@ namespace CelestialBodies.Terrain
         internal TerrainFace[] TerrainFaces;
 
         internal bool Dirty;
-        internal bool DirtyFaceCount;
+        internal bool DirtyFaceResolution;
     }
 
     class TerrainMeshData
@@ -512,8 +665,7 @@ namespace CelestialBodies.Terrain
         internal Thread CurrentThread;
     }
 
-    struct TerrainFace
-    {
+    struct TerrainFace {
         internal ShapeGenerator ShapeGenerator;
         internal readonly Mesh Mesh;
         internal readonly int RowID;
@@ -749,6 +901,33 @@ namespace CelestialBodies.Terrain
             GroundTextureBlend = settings.TextureBlend;
             GroundTextureNormals = settings.TextureNormal;
             GroundSmooth = settings.GroundSmooth;
+        }
+    }
+    
+    class TerrainMeshThreadCalculation
+    {
+        public bool IsCalculating;
+        public bool SubmitedNewCalculation;
+        public bool IsTerminated;
+        public TerrainFace TerrainFace;
+        internal int Resolution;
+
+        public void TerminateThread()
+        {
+            IsTerminated = true;
+        }
+
+        public bool SubmitCalculation(TerrainFace terrainFace, bool doubleResolution)
+        {
+            if (IsCalculating || SubmitedNewCalculation)
+            {
+                return false;
+            }
+
+            TerrainFace = terrainFace;
+            Resolution = doubleResolution? terrainFace.HighResolution : terrainFace.MinResolution;
+            SubmitedNewCalculation = true;
+            return true;
         }
     }
 }
