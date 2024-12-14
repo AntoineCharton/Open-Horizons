@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using CelestialBodies.Clouds.Rendering;
 using CelestialBodies.Terrain;
@@ -27,8 +28,16 @@ namespace CelestialBodies
 
         private void Update()
         {
-            VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, surface.shape.Radius);
-            surface.SmartUpdate(transform);
+            try
+            {
+                VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, surface.shape.Radius);
+                surface.SmartUpdate(transform);
+            }catch (Exception ex)
+            {
+                Debug.LogError($"An exception occurred: {ex}");
+                Debug.LogError(ex.StackTrace);
+            }
+
         }
 
         private void LateUpdate()

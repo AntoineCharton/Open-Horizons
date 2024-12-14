@@ -131,7 +131,7 @@ namespace CelestialBodies.Terrain
         
         internal static void SmartUpdate(this ref Surface surface, Transform transform)
         {
-            if (surface.terrain.Material.mainTexture == null) // When we loose serialization we want to regenerate the texture
+            if (surface.terrain.Material.mainTexture == null || surface.TerrainFaces == null) // When we loose serialization we want to regenerate the texture
             {
                 surface.Dirty = true;
             }
