@@ -188,14 +188,8 @@ namespace CelestialBodies.Terrain
 
         private static void GenerateMeshLod(this ref Surface surface, TerrainMeshThreadCalculation terrainCalculator)
         {
-            if (surface.CurrentClosestFaceUpdate < surface.ClosestFaces.Length)
-            {
-                surface.CurrentSurface = surface.ClosestFaces[surface.CurrentClosestFaceUpdate];
-                var isDoubleResolution = false;
-                if (surface.TerrainFaces[surface.CurrentSurface].GeneratePlanet(terrainCalculator, true))
-                    surface.CurrentClosestFaceUpdate++;
-            }
-            else if(surface.CurrentPreviousClosestFaceUpdate < surface.PreviousClosestFaces.Length)
+            
+            if(surface.CurrentPreviousClosestFaceUpdate < surface.PreviousClosestFaces.Length)
             {
                 var keepHighResolution = false;
                 for (var i = 0; i < surface.ClosestFaces.Length; i++)
@@ -215,6 +209,13 @@ namespace CelestialBodies.Terrain
                 {
                     surface.CurrentPreviousClosestFaceUpdate++;
                 }
+            }
+            else if (surface.CurrentClosestFaceUpdate < surface.ClosestFaces.Length)
+            {
+                surface.CurrentSurface = surface.ClosestFaces[surface.CurrentClosestFaceUpdate];
+                var isDoubleResolution = false;
+                if (surface.TerrainFaces[surface.CurrentSurface].GeneratePlanet(terrainCalculator, true))
+                    surface.CurrentClosestFaceUpdate++;
             }
             else
             {

@@ -1,5 +1,4 @@
 using System;
-using System.Threading;
 using CelestialBodies.Clouds.Rendering;
 using CelestialBodies.Terrain;
 using CelestialBodies.Sky;
