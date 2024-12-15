@@ -31,12 +31,13 @@ namespace CelestialBodies
             {
                 VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, surface.shape.Radius);
                 surface.SmartUpdate(transform);
-            }catch (Exception ex)
+                if(Application.isPlaying)
+                    surface.SwitchToAsyncUpdate();
+            } catch (Exception ex)
             {
                 Debug.LogError($"An exception occurred: {ex}");
                 Debug.LogError(ex.StackTrace);
             }
-
         }
 
         private void LateUpdate()
@@ -53,6 +54,7 @@ namespace CelestialBodies
         private void OnDestroy()
         {
             surface.Cleanup();
+            surface.SwitchToParrallelUpdate();
         }
 
         public void AtmosphereActive(bool isActive)
