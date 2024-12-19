@@ -140,7 +140,7 @@ namespace CelestialBodies.Terrain
             thread.Start();
         }
         
-        internal static void SmartUpdate(this ref Surface surface, Transform transform)
+        internal static void SmartUpdate(this ref Surface surface, Transform transform, TerrainDetails terrainDetails)
         {
             if (surface.terrain.Material.mainTexture == null || surface.TerrainFaces == null) // When we loose serialization we want to regenerate the texture
             {
@@ -171,7 +171,7 @@ namespace CelestialBodies.Terrain
             {
                 surface.GenerateMeshLod(surface.TerrainMeshThreadCalculation);
             }
-            surface.AssignMesh();
+            surface.AssignMesh(terrainDetails);
         }
         
         internal static void Dirty(this ref Surface surface)
@@ -260,7 +260,7 @@ namespace CelestialBodies.Terrain
             return false;
         }
         
-        private static void AssignMesh(this ref Surface surface)
+        private static void AssignMesh(this ref Surface surface, TerrainDetails terrainDetails)
         {
             for (var i = 0; i < surface.TerrainFaces.Length; i++)
             {
@@ -271,11 +271,30 @@ namespace CelestialBodies.Terrain
                     if (!surface.TerrainFaces[i].TerrainMeshData.IsGeneratingVertex &&
                         surface.TerrainFaces[i].TerrainMeshData.IsDoneGeneratingVertex)
                     {
+                        
                         surface.TerrainFaces[i].Mesh.Clear();
                         surface.TerrainFaces[i].Mesh.vertices = surface.TerrainFaces[i].TerrainMeshData.Vertices;
                         surface.TerrainFaces[i].Mesh.triangles = surface.TerrainFaces[i].TerrainMeshData.Triangles;
                         surface.TerrainFaces[i].Mesh.normals = surface.TerrainFaces[i].TerrainMeshData.Normals;
-                        surface.TerrainFaces[i].TerrainMeshData.IsDoneGeneratingVertex = false;
+                        
+                        if (surface.TerrainFaces[i].TerrainMeshData.IsHighDefinition && surface.UpdateAsync)
+                        {
+                            if (terrainDetails.HighDefinition(surface.TerrainFaces[i].TerrainMeshData.Vertices, i, surface.ShapeGenerator.ElevationMinMax))
+                            {
+                                surface.TerrainFaces[i].TerrainMeshData.IsDoneGeneratingVertex = false;
+                            }
+                        }
+                        else if(surface.UpdateAsync)
+                        {
+                            if (terrainDetails.LowDefinition(i))
+                            {
+                                surface.TerrainFaces[i].TerrainMeshData.IsDoneGeneratingVertex = false;
+                            }
+                        }
+                        else
+                        {
+                            surface.TerrainFaces[i].TerrainMeshData.IsDoneGeneratingVertex = false;
+                        }
                         if(surface.UpdateAsync)
                             return; //We only want to do that once per frame to avoid lags
                     }
@@ -352,21 +371,23 @@ namespace CelestialBodies.Terrain
             colorGenerator.UpdateColors();
         }
         
-        private static bool GeneratePlanet(this ref TerrainFace terrainFace, TerrainMeshThreadCalculation terrainCalculator, bool doubleResolution, bool isParallel)
+        private static bool GeneratePlanet(this ref TerrainFace terrainFace, TerrainMeshThreadCalculation terrainCalculator, bool isHighResolution, bool isParallel)
         {
             var resolution = terrainFace.MinResolution;
-            if (doubleResolution)
+            if (isHighResolution)
                 resolution = terrainFace.HighResolution;
 
             if (!Application.isPlaying)
             {
                 resolution = Mathf.Min(resolution, 32);
             }
+
+            terrainFace.TerrainMeshData.IsHighDefinition = isHighResolution;
             
             if (isParallel)
             {
                 Profiler.BeginSample("Update Planet Mesh");
-                if (!terrainCalculator.SubmitCalculation(terrainFace, doubleResolution))
+                if (!terrainCalculator.SubmitCalculation(terrainFace, isHighResolution))
                     return false;
                 Profiler.EndSample();
             }
@@ -380,6 +401,7 @@ namespace CelestialBodies.Terrain
 
         private static void CalculateFace(ref TerrainFace terrainFace, int resolution, int y)
         {
+            
             int triIndex = y * (resolution - 1) * 6;
             for (int x = 0; x < resolution; x++)
             {
@@ -628,7 +650,7 @@ namespace CelestialBodies.Terrain
     {
         [SerializeField, Range(3, 127)] internal int minResolution;
         [SerializeField, Range(3, 4096)] internal int highResolution;
-        [SerializeField, Range(1, 20)] internal int subdivisions;
+        [SerializeField, Range(1, 100)] internal int subdivisions;
         internal bool UpdateAsync;
         internal int CurrentSurface;
         internal ShapeGenerator ShapeGenerator;
@@ -662,9 +684,7 @@ namespace CelestialBodies.Terrain
 
         [SerializeField] internal Terrain terrain;
         [SerializeField] internal Shape shape;
-
         internal TerrainFace[] TerrainFaces;
-
         internal bool Dirty;
         internal bool DirtyFaceResolution;
     }
@@ -677,6 +697,7 @@ namespace CelestialBodies.Terrain
         internal bool IsGeneratingVertex;
         internal bool IsDoneGeneratingVertex;
         internal bool IsCalculatedMeshAssigned;
+        internal bool IsHighDefinition;
     }
 
     struct TerrainFace {
@@ -926,20 +947,19 @@ namespace CelestialBodies.Terrain
         public TerrainFace TerrainFace;
         internal int Resolution;
 
-        public void TerminateThread()
+        internal void TerminateThread()
         {
             IsTerminated = true;
         }
 
-        public bool SubmitCalculation(TerrainFace terrainFace, bool doubleResolution)
+        internal bool SubmitCalculation(TerrainFace terrainFace, bool isHighResolution)
         {
             if (IsCalculating || SubmitedNewCalculation || terrainFace.TerrainMeshData.IsDoneGeneratingVertex)
             {
                 return false;
             }
-
             TerrainFace = terrainFace;
-            Resolution = doubleResolution? terrainFace.HighResolution : terrainFace.MinResolution;
+            Resolution = isHighResolution? terrainFace.HighResolution : terrainFace.MinResolution;
             SubmitedNewCalculation = true;
             return true;
         }

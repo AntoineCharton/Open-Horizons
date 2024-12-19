@@ -3,6 +3,7 @@ using BigWorld.Doubles;
 using CelestialBodies;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace BigWorld
 {
@@ -16,13 +17,18 @@ namespace BigWorld
         [SerializeField] private float rescaleMultiplicator = 11; // This needs to go away and be calculated in code
         private double _size;
         private double _width;
+        private bool _isWidthCalculated;
 
         void CalculateWidth()
         {
-            var currentScale = planet.transform.localScale;
-            planet.transform.localScale = Vector3.one;
-            _width = planet.GetBounds().size.z;
-            planet.transform.localScale = currentScale;
+            if (!_isWidthCalculated)
+            {
+                _isWidthCalculated = true;
+                var currentScale = planet.transform.localScale;
+                planet.transform.localScale = Vector3.one;
+                _width = planet.GetBounds().size.z;
+                planet.transform.localScale = currentScale;
+            }
         }
 
         private void LateUpdate()

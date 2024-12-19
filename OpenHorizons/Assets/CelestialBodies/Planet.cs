@@ -12,6 +12,12 @@ namespace CelestialBodies
         [SerializeField] private Surface surface;
         [SerializeField] internal AtmosphereGenerator sky;
         [SerializeField] private Cloud cloud;
+        private TerrainDetails _details;
+
+        private void Start()
+        {
+            _details = GetComponent<TerrainDetails>();
+        }
 
         private void OnEnable()
         {
@@ -27,17 +33,10 @@ namespace CelestialBodies
 
         private void Update()
         {
-            try
-            {
-                VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, surface.shape.Radius);
-                surface.SmartUpdate(transform);
-                if(Application.isPlaying)
-                    surface.SwitchToAsyncUpdate();
-            } catch (Exception ex)
-            {
-                Debug.LogError($"An exception occurred: {ex}");
-                Debug.LogError(ex.StackTrace);
-            }
+            VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, surface.shape.Radius);
+            surface.SmartUpdate(transform, _details);
+            if (Application.isPlaying)
+                surface.SwitchToAsyncUpdate();
         }
 
         private void LateUpdate()
@@ -59,7 +58,7 @@ namespace CelestialBodies
 
         public void AtmosphereActive(bool isActive)
         {
-            if(sky.atmosphere.Visible != isActive)
+            if (sky.atmosphere.Visible != isActive)
                 sky.atmosphere.Visible = isActive;
             sky.UpdateAtmosphereEffect(this);
         }
