@@ -61,7 +61,6 @@ namespace CelestialBodies
                     {
                         currentChunkEvaluated = 0;
                     }
-                    Debug.Log("New chunk" + currentChunkEvaluated);
                     break;
                 }
 

@@ -12,11 +12,14 @@ namespace CelestialBodies
         [SerializeField] private Surface surface;
         [SerializeField] internal AtmosphereGenerator sky;
         [SerializeField] private Cloud cloud;
+        [SerializeField] private Fog fog;
         private TerrainDetails _details;
 
         private void Start()
         {
             _details = GetComponent<TerrainDetails>();
+            if(Application.isPlaying)
+                fog.Start(gameObject);
         }
 
         private void OnEnable()
@@ -36,7 +39,10 @@ namespace CelestialBodies
             VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, surface.shape.Radius);
             surface.SmartUpdate(transform, _details);
             if (Application.isPlaying)
+            {
+                fog.Update(surface.shape.Radius);
                 surface.SwitchToAsyncUpdate();
+            }
         }
 
         private void LateUpdate()
@@ -52,6 +58,8 @@ namespace CelestialBodies
 
         private void OnDestroy()
         {
+            if(Application.isPlaying)
+                fog.Destroy();
             surface.Cleanup();
             surface.SwitchToParrallelUpdate();
         }

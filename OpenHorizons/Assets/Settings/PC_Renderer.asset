@@ -67,7 +67,8 @@ MonoBehaviour:
   - {fileID: 7833122117494664109}
   - {fileID: 881839382183441088}
   - {fileID: 93290827436667206}
-  m_RendererFeatureMap: ad6b866f10d7b46cc072fef33eec3c0c46312a66836f4b01
+  - {fileID: 3011702617343663630}
+  m_RendererFeatureMap: ad6b866f10d7b46cc072fef33eec3c0c46312a66836f4b010e1ee2e392b7cb29
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
@@ -129,6 +130,23 @@ MonoBehaviour:
   m_Name: AtmosphereRenderFeature
   m_EditorClassIdentifier: 
   m_Active: 1
+--- !u!114 &3011702617343663630
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70f7019dd2edd7a4685108cd368f345f, type: 3}
+  m_Name: VolumetricFogFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  Settings:
+    Event: 550
+    VolumetricFogMaterial: {fileID: 2100000, guid: ee375c9084453ea4db3a0c5394d49aa4, type: 2}
+    InstantiateMaterial: 1
 --- !u!114 &7833122117494664109
 MonoBehaviour:
   m_ObjectHideFlags: 0
