@@ -20,6 +20,7 @@ namespace CelestialBodies.Terrain
         private static readonly int GroundNorm = Shader.PropertyToID("_GroundNorm");
         private static readonly int WaterNorm = Shader.PropertyToID("_WaterNorm");
         private static readonly int GroundSmooth = Shader.PropertyToID("_GroundSmooth");
+        private const int highDefinitionFaces = 4; 
 
         internal static void Cleanup(this Surface surface)
         {
@@ -82,8 +83,8 @@ namespace CelestialBodies.Terrain
             if(surface.AllFacesGenerated == false)
                 return;
             
-            var closestFaces = new int[4];
-            var closestDistances = new float[4];
+            var closestFaces = new int[highDefinitionFaces];
+            var closestDistances = new float[highDefinitionFaces];
             Array.Fill(closestDistances, float.MaxValue);
             Array.Fill(closestFaces, -1);
             var cameraPosition = Camera.main.transform.position;
@@ -91,7 +92,7 @@ namespace CelestialBodies.Terrain
             {
                 var currentDistance = Vector3.Distance(cameraPosition, surface.MeshRenderers[i].bounds.center);
                 // Check if the current number is smaller than the largest number in resultArray
-                for (int j = 0; j < 4; j++)
+                for (int j = 0; j < highDefinitionFaces; j++)
                 {
                     if (currentDistance < closestDistances[j])
                     {
@@ -306,8 +307,8 @@ namespace CelestialBodies.Terrain
         {
             surface.ShapeGenerator = new ShapeGenerator(surface.shape);
             surface.ColorGenerator = new ColorGenerator(surface.terrain);
-            surface.ClosestFaces = new int[4];
-            surface.PreviousClosestFaces = new int[4];
+            surface.ClosestFaces = new int[highDefinitionFaces];
+            surface.PreviousClosestFaces = new int[highDefinitionFaces];
             var subdivision = surface.subdivisions;
             var subdivisionCount = 6 * (subdivision * subdivision);
             if (surface.meshFilters == null || surface.meshFilters.Length == 0 || surface.meshFilters.Length != subdivisionCount)

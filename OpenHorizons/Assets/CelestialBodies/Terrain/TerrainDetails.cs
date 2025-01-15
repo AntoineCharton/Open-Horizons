@@ -1,435 +1,447 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
 using CelestialBodies.Terrain;
 using UnityEngine;
-using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 
 namespace CelestialBodies
 {
     public class TerrainDetails : MonoBehaviour
     {
-        [SerializeField] private List<GameObject> references;
-        private List<int> _currentDetailsIDs;
-        [SerializeField] private List<DetailsGroup> _detailsGroups;
-        [SerializeField] private List<PooledDetail>[] _pooledDetails;
+        private const int UpdatePerFrames = 500;
+        private Noise _noise;
+        private int currentIDEvaluated;
+        private int currentChunkEvaluated;
+        [SerializeField] private List<Reference> _references;
+        [SerializeField] private List<Chunk> _chunks;
         [SerializeField] private float minAltitudeOffset;
         [SerializeField] private float maxAltitudeOffset;
         private float _minAlitude;
         private float _maxAltitude;
-        private int _currentPoolDetailCount;
-        private int _currentGroupCount;
-        private const int UpdatePerFrames = 100;
-        private Noise _noise;
-        public bool canUpdate;
-        private ThreadDetailsBuilder _threadDetailsBuilder;
-        private ThreadDetailSorter _threadDetailSorter;
-        private bool isAvailableReady;
-        private bool lookForAvailablePool;
 
         private void Awake()
         {
-            isAvailableReady = false;
-            lookForAvailablePool = true;
-            _threadDetailSorter = new ThreadDetailSorter(UpdatePerFrames, references.Count);
+            _chunks = new List<Chunk>();
             _noise = new Noise();
-            _threadDetailsBuilder = new ThreadDetailsBuilder();
-            canUpdate = true;
-            _detailsGroups = new List<DetailsGroup>();
-            _currentDetailsIDs = new List<int>();
-            _pooledDetails = new List<PooledDetail>[references.Count];
-            for (var i = 0; i < _pooledDetails.Length; i++)
+            for (var i = 0; i < _references.Count; i++)
             {
-                _pooledDetails[i] = new List<PooledDetail>();
+                _references[i].pool.Initialize(UpdatePerFrames);
             }
-
-            Thread thread = new Thread(UpdateDetail);
-            Thread lookForAvailableTreeThread = new Thread(LookForAvailableTree);
-            _threadDetailsBuilder.IsActive = true;
-            lookForAvailableTreeThread.Start();
-            thread.Start();
-        }
-
-        private void LookForAvailableTree()
-        {
-            while (_threadDetailSorter.LookForAvailableTree)
-            {
-                if (lookForAvailablePool)
-                {
-                    isAvailableReady = false;
-                    for (var k = 0; k < _pooledDetails.Length; k++)
-                    {
-                        for (var i = 0; i < _threadDetailSorter.AvailableIndices.Length; i++)
-                        {
-                            AddPooledObjectToAvailableIndexes(_threadDetailSorter.AvailableIndices[i], k);
-                        }
-                    }
-
-                    lookForAvailablePool = false;
-                }
-
-                Thread.Sleep(1);
-                isAvailableReady = true;
-            }
-
-            void AddPooledObjectToAvailableIndexes(ThreadDetailSorter.AvailableIndex availableIndices, int pooledID)
-            {
-                for (var i = 0; i < availableIndices.AvailableIndexes.Length; i++)
-                {
-                    if (availableIndices.AvailableIndexes[i] == -1)
-                    {
-                        for (int j = 0; j < _pooledDetails[pooledID].Count; j++)
-                        {
-                            if (_pooledDetails[pooledID][j].ID == -1)
-                            {
-                                availableIndices.AvailableIndexes[i] = j;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        internal bool HighDefinition(Vector3[] positions, int id, MinMax minMax)
-        {
-            if (!canUpdate)
-                return false;
-
-            if (_currentDetailsIDs.Contains(id))
-                return true;
-
-            _minAlitude = minMax.Min + minAltitudeOffset;
-            _maxAltitude = minMax.Max - maxAltitudeOffset;
-            canUpdate = false;
-            _threadDetailsBuilder.Positions = positions;
-            _threadDetailsBuilder.ID = id;
-            _threadDetailsBuilder.IsCalculating = true;
-            return false;
-        }
-
-        void UpdateDetail()
-        {
-            while (_threadDetailsBuilder.IsActive)
-            {
-                if (_threadDetailsBuilder.IsCalculating && !_threadDetailsBuilder.Lock)
-                {
-                    Stopwatch time = new Stopwatch();
-                    time.Start();
-                    var currentGroup = -1;
-                    for (var i = 0; i < _detailsGroups.Count; i++)
-                    {
-                        if (_detailsGroups[i].id == -1)
-                        {
-                            currentGroup = i;
-                            break;
-                        }
-                    }
-
-                    if (currentGroup == -1)
-                    {
-                        var newGroup = new DetailsGroup();
-                        newGroup.id = _threadDetailsBuilder.ID;
-                        _detailsGroups.Add(newGroup);
-                        currentGroup = _detailsGroups.Count - 1;
-                    }
-                    else
-                    {
-                        _detailsGroups[currentGroup].id = _threadDetailsBuilder.ID;
-                    }
-
-                    for (int i = 0; i < _threadDetailsBuilder.Positions.Length; i++)
-                    {
-                        if (_minAlitude < Vector3.Distance(Vector3.zero, _threadDetailsBuilder.Positions[i]) &&
-                            !(_maxAltitude < Vector3.Distance(Vector3.zero, _threadDetailsBuilder.Positions[i])) &&
-                            _noise.Evaluate(_threadDetailsBuilder.Positions[i]) > 0.1f)
-                        {
-                            PositionDetail(_threadDetailsBuilder.Positions[i], _threadDetailsBuilder.ID, currentGroup,
-                                _noise.Evaluate(_threadDetailsBuilder.Positions[i]) > 0.4f ? 0 : 1);
-                        }
-                    }
-
-                    _currentDetailsIDs.Add(_threadDetailsBuilder.ID);
-                    canUpdate = true;
-                    _threadDetailsBuilder.IsCalculating = false;
-                    time.Stop();
-                    TimeSpan ts = time.Elapsed;
-                    string elapsedTime = String.Format("{0:00}:{1:00}:{2:00}.{3:00}",
-                        ts.Hours, ts.Minutes, ts.Seconds,
-                        ts.Milliseconds / 10);
-                    UnityEngine.Debug.Log("RunTime " + elapsedTime);
-                }
-
-                Thread.Sleep(1);
-            }
-
-            Debug.Log("Dispose detail builder");
         }
 
         private void Update()
         {
-            if (canUpdate && isAvailableReady)
-                UpdatePooledDetails();
+            UpdateDetails();
         }
 
-        void UpdatePooledDetails()
+        void UpdateDetails()
         {
-            var position = Camera.main.transform.position;
-            var positionOffset = transform.position;
-            if (_detailsGroups.Count == 0 || !canUpdate)
-            {
-                _currentGroupCount = 0;
-                _currentPoolDetailCount = 0;
+            if (_chunks.Count == 0)
                 return;
-            }
-
-            void PositionDetail(ref DetailData detailData)
+            var currentPositions = _chunks[currentChunkEvaluated].GetPositions();
+            if (currentPositions.Length == 0)
+                return;
+            var loopedCurrentIDs = false;
+            for (var i = 0; i < _references.Count; i++)
             {
-                var pooledDetailFound = false;
-                var referenceID = detailData.ReferenceID;
-                for (int i = 0; i < _threadDetailSorter.AvailableIndices[referenceID].AvailableIndexes.Length; i++)
-                {
-                    if (_threadDetailSorter.AvailableIndices[referenceID].AvailableIndexes[i] != -1)
-                    {
-                        var j = _threadDetailSorter.AvailableIndices[referenceID].AvailableIndexes[i];
-                        
-                        var pooledDetail = _pooledDetails[referenceID];
-                        if (pooledDetail[j].ID == -1 && detailData.AssignedPoolID == -1)
-                        {
-                            _threadDetailSorter.AvailableIndices[referenceID].AvailableIndexes[i] = -1;
-                            SetPosition(pooledDetail[j].GameObject, detailData.Position);
-                            var currentPooledDetail = pooledDetail[j];
-                            currentPooledDetail.ID = detailData.ID;
-                            pooledDetail[j] = currentPooledDetail;
-                            detailData.AssignedPoolID = j;
-                            _pooledDetails[referenceID][j] = pooledDetail[j];
-                            pooledDetailFound = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (!pooledDetailFound)
-                {
-                    var newPooledDetailObject = Instantiate(references[detailData.ReferenceID], transform);
-                    var newPooledDetail = new PooledDetail(newPooledDetailObject, detailData.ReferenceID);
-                    SetPosition(newPooledDetailObject, detailData.Position);
-                    _pooledDetails[detailData.ReferenceID].Add(newPooledDetail);
-                    detailData.AssignedPoolID = _pooledDetails[detailData.ReferenceID].Count - 1;
-                }
-            }
-
-            var targetIndex = UpdatePerFrames + _currentPoolDetailCount;
-            const float distance = 5000;
-            for (var i = _currentPoolDetailCount; i < targetIndex; i++)
-            {
-                var currentGroup = _detailsGroups[_currentGroupCount];
-                if (currentGroup.detailDatas.Count == 0)
-                {
+                if(!_references[i].pool.HasFoundAvailableIndexes())
                     return;
+            }
+                
+            for (var i = 0; i < UpdatePerFrames; i++)
+            {
+                var currentID = i + currentIDEvaluated;
+                if (currentPositions.Length == currentID)
+                {
+                    currentChunkEvaluated++;
+                    currentIDEvaluated = 0;
+                    loopedCurrentIDs = true;
+                    if (_chunks.Count == currentChunkEvaluated)
+                    {
+                        currentChunkEvaluated = 0;
+                    }
+                    Debug.Log("New chunk" + currentChunkEvaluated);
+                    break;
                 }
 
-                var detailData = currentGroup.detailDatas[i];
-                if (_detailsGroups[_currentGroupCount].detailDatas[i].ID != -1)
+                EvaluateDetail(currentID,currentPositions[currentID]);
+            }
+
+            if (!loopedCurrentIDs)
+            {
+                currentIDEvaluated += UpdatePerFrames;
+            }
+
+            for (var i = 0; i < _references.Count; i++)
+            {
+                _references[i].pool.FindNewIndexes();
+            }
+        }
+
+        void EvaluateDetail(int currentID, Vector3 currentPosition)
+        {
+            var sum = 0f;
+            for (var i = 0; i < _references.Count; i++)
+            {
+                sum += _references[i].frequence;
+            }
+            
+            if (!_chunks[currentChunkEvaluated].IsAssigned(currentID) &&
+                !_chunks[currentChunkEvaluated].IsAvailable() && 
+                _minAlitude < Vector3.Distance(Vector3.zero, currentPosition) &&
+                !(_maxAltitude < Vector3.Distance(Vector3.zero, currentPosition)) &&
+                _noise.Evaluate(currentPosition) > 0.1f)
+            {
+                var targetValue = 0f;
+                for (int i = 0; i < _references.Count; i++)
                 {
-                    if (Vector3.Distance(position, detailData.Position + positionOffset) < distance &&
-                        detailData.AssignedPoolID == -1)
+                    targetValue += (_references[i].frequence / sum);
+                    //We offset the noise so the blank spots don't affect the noise
+                    if (_noise.Evaluate(currentPosition + new Vector3(1000,0,0)) <= targetValue || i == _references.Count -1)
                     {
-                        Profiler.BeginSample("Position");
-                        PositionDetail(ref detailData);
-                        Profiler.EndSample();
-                    }
-                    else if (detailData.AssignedPoolID != -1 &&
-                             Vector3.Distance(position, detailData.Position + positionOffset) >= distance)
-                    {
-                        var pooledDetail = _pooledDetails[detailData.ReferenceID][detailData.AssignedPoolID];
-                        pooledDetail.ID = -1;
-                        _pooledDetails[detailData.ReferenceID][detailData.AssignedPoolID] = pooledDetail;
-                        detailData.AssignedPoolID = -1;
+                        var poolID = _references[i].pool.Instantiate(_references[i].reference, transform,
+                            currentPosition, _noise.Evaluate(currentPosition), currentChunkEvaluated, currentID);
+                        _chunks[currentChunkEvaluated].AssignPool(currentID, i, poolID);
+                        break;
                     }
                 }
+                
+            }
+        }
 
-                _detailsGroups[_currentGroupCount].detailDatas[i] = detailData;
-                _currentPoolDetailCount++;
-                if (_currentPoolDetailCount >= _detailsGroups[_currentGroupCount].detailDatas.Count)
+        bool AlreadyContainsID(int id)
+        {
+            for (var i = 0; i < _chunks.Count; i++)
+            {
+                if (_chunks[i].MatchesID(id))
+                    return true;
+            }
+
+            return false;
+        }
+
+        internal bool HighDefinition(Vector3[] positions, int id, MinMax minMax)
+        {
+            if (AlreadyContainsID(id))
+                return true;
+            
+            _minAlitude = minMax.Min + minAltitudeOffset;
+            _maxAltitude = minMax.Max - maxAltitudeOffset;
+            
+            var foundChunk = false;
+            for (int i = 0; i < _chunks.Count; i++)
+            {
+                if (_chunks[i].IsAvailable())
                 {
-                    _currentGroupCount++;
-                    if (_currentGroupCount >= _detailsGroups.Count)
-                    {
-                        _currentGroupCount = 0;
-                    }
-                    else if (_detailsGroups[_currentGroupCount].detailDatas.Count == 0)
-                    {
-                        _currentGroupCount++;
-                        if (_currentGroupCount >= _detailsGroups.Count)
-                        {
-                            _currentGroupCount = 0;
-                        }
-                    }
-
-                    _currentPoolDetailCount = 0;
+                    _chunks[i].SetPositions(positions, id);
+                    foundChunk = true;
                     break;
                 }
             }
 
-            lookForAvailablePool = true;
-        }
-
-        private void OnDestroy()
-        {
-            _threadDetailsBuilder.IsActive = false;
-            _threadDetailSorter.LookForAvailableTree = false;
-        }
-
-        void PositionDetail(Vector3 position, int id, int groupID, int referenceID)
-        {
-            for (var i = 0; i < _detailsGroups[groupID].detailDatas.Count; i++)
+            if (!foundChunk)
             {
-                var detailData = _detailsGroups[groupID].detailDatas[i];
-                if (_detailsGroups[groupID].detailDatas[i].ID == -1)
-                {
-                    detailData.ID = id;
-                    detailData.AssignedPoolID = -1;
-                    detailData.Position = position;
-                    detailData.ReferenceID = referenceID;
-                    _detailsGroups[groupID].detailDatas[i] = detailData;
-                    return;
-                }
+                var newChunk = new Chunk();
+                newChunk.SetPositions(positions, id);
+                _chunks.Add(newChunk);
             }
 
-            var newDetailData = new DetailData(position, id, referenceID);
-            _detailsGroups[groupID].detailDatas.Add(newDetailData);
-        }
-
-        void SetPosition(GameObject detailGameObject, Vector3 position)
-        {
-            detailGameObject.transform.localPosition = position;
-            detailGameObject.transform.LookAt(transform.position, Vector3.back);
-            detailGameObject.transform.Rotate(Vector3.up, -90, Space.Self);
-            detailGameObject.transform.Rotate(Vector3.right, _noise.Evaluate(position) * 360, Space.Self);
+            return true;
         }
 
         internal bool LowDefinition(int id)
         {
-            var groupID = -1;
-            for (var i = 0; i < _detailsGroups.Count; i++)
+            for (var i = 0; i < _chunks.Count; i++)
             {
-                if (_detailsGroups[i].id == id)
-                {
-                    groupID = i;
-                    break;
-                }
+                _chunks[i].ResetIfIDMatches(id, _references);
             }
 
-            if (_detailsGroups.Count == 0 || !_currentDetailsIDs.Contains(id) || groupID == -1)
-                return true;
-
-            _threadDetailsBuilder.Lock = true;
-            for (var i = 0; i < _detailsGroups[groupID].detailDatas.Count; i++)
-            {
-                var detail = _detailsGroups[groupID].detailDatas[i];
-                if (detail.AssignedPoolID != -1)
-                {
-                    var objectDetail = _pooledDetails[detail.ReferenceID][detail.AssignedPoolID];
-                    objectDetail.ID = -1;
-                    objectDetail.GameObject.transform.localPosition = Vector3.zero;
-                    _pooledDetails[detail.ReferenceID][detail.AssignedPoolID] = objectDetail;
-                }
-
-                detail.ID = -1;
-
-                _detailsGroups[groupID].detailDatas[i] = detail;
-            }
-
-            _detailsGroups[groupID].id = -1;
-            _currentDetailsIDs.Remove(id);
-            _threadDetailsBuilder.Lock = false;
             return true;
         }
+
+        private void OnDestroy()
+        {
+            for (var i = 0; i < _references.Count; i++)
+            {
+                _references[i].pool.DisposeThreads();
+            }
+        }
     }
 
-    class ThreadDetailSorter
+    [Serializable]
+    class Reference
     {
-        internal AvailableIndex[] AvailableIndices;
-        internal bool LookForAvailableTree;
+        [SerializeField] internal GameObject reference;
+        [SerializeField] internal Pool pool;
+        [SerializeField] internal float frequence = 0.5f;
+    }
 
-        internal ThreadDetailSorter(int updatePerFrames, int numberOfReferences)
+    [Serializable]
+    class Pool
+    {
+        [SerializeField] private List<GameObject> pooledGameObjects;
+        [SerializeField] private List<PoolTarget> poolTargets;
+        private int availableGameObjects;
+        [SerializeField]
+        private int[] availablePoolIndexes;
+        bool findNewIndexes;
+        private bool runIndexesSearch;
+
+        internal void Initialize(int maxUpdate)
         {
-            AvailableIndices = new AvailableIndex[numberOfReferences];
-            for (var i = 0; i < AvailableIndices.Length; i++)
+            findNewIndexes = false;
+            runIndexesSearch = true;
+            availablePoolIndexes = new int[maxUpdate];
+            for (var i = 0; i < availablePoolIndexes.Length; i++)
             {
-                AvailableIndices[i] = new AvailableIndex(updatePerFrames);
-                for (var j = 0; j < AvailableIndices[i].AvailableIndexes.Length; j++)
+                availablePoolIndexes[i] = -1;
+            }
+
+            Thread thread = new Thread(FindAvailableIndexes);
+            thread.Start();
+        }
+
+        internal bool HasFoundAvailableIndexes()
+        {
+            return !findNewIndexes;
+        }
+
+        internal void FindNewIndexes()
+        {
+            findNewIndexes = true;
+        }
+
+        void FindAvailableIndexes()
+        {
+            while (runIndexesSearch)
+            {
+                if (findNewIndexes)
                 {
-                    AvailableIndices[i].AvailableIndexes[j] = -1;
+                    for (var i = 0; i < availablePoolIndexes.Length; i++)
+                    {
+                        availablePoolIndexes[i] = -1;
+                    }
+                    
+                    for (int j = 0; j < poolTargets.Count; j++)
+                    {
+                        for (var i = 0; i < availablePoolIndexes.Length; i++)
+                        {
+                            if (availablePoolIndexes[i] == -1)
+                            {
+                                if (poolTargets[j].IsAvailable())
+                                {
+                                    availablePoolIndexes[i] = j;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    findNewIndexes = false;
+                }
+
+                Thread.Sleep(1);
+            }
+            Debug.Log("Finished thread");
+        }
+
+        internal void DisposeThreads()
+        {
+            runIndexesSearch = false;
+        }
+
+        internal int Instantiate(GameObject reference, Transform parent, Vector3 position, float rotation, int chunkID, int id)
+        {
+            if (pooledGameObjects == null)
+            {
+                pooledGameObjects = new List<GameObject>();
+                poolTargets = new List<PoolTarget>();
+            }
+
+            var targetId = -1;
+            if (availableGameObjects > 0)
+            {
+                for (int i = 0; i < availablePoolIndexes.Length; i++)
+                {
+                    if (availablePoolIndexes[i] != -1)
+                    {
+                        targetId = availablePoolIndexes[i];
+                        availablePoolIndexes[i] = -1;
+                        break;
+                    }
                 }
             }
 
-            LookForAvailableTree = true;
-        }
-
-        internal class AvailableIndex
-        {
-            internal readonly int[] AvailableIndexes;
-
-            internal AvailableIndex(int updatePerFrame)
+            GameObject newGameObject;
+            if (targetId < 0)
             {
-                AvailableIndexes = new int[updatePerFrame];
+                newGameObject = GameObject.Instantiate(reference, position, Quaternion.identity);
+                PlaceGameObject(newGameObject);
+                pooledGameObjects.Add(newGameObject);
+                poolTargets.Add(new PoolTarget(chunkID, id));
+                return poolTargets.Count - 1;
+            }
+
+            availableGameObjects--;
+            newGameObject = pooledGameObjects[targetId];
+            poolTargets[targetId] = new PoolTarget(chunkID, id);
+            PlaceGameObject(newGameObject);
+            return targetId;
+
+            void PlaceGameObject(GameObject gameObject)
+            {
+                gameObject.transform.parent = parent;
+                gameObject.transform.localPosition = position;
+                gameObject.transform.LookAt(parent.position, Vector3.back);
+                gameObject.transform.Rotate(Vector3.up,  -90, Space.Self);
+                gameObject.transform.Rotate(Vector3.right, rotation * 360, Space.Self);
             }
         }
-    }
 
-    [Serializable]
-    class DetailsGroup
-    {
-        [SerializeField] internal int id;
-        [SerializeField] internal List<DetailData> detailDatas;
-
-        public DetailsGroup()
+        internal bool IsInitialized()
         {
-            detailDatas = new List<DetailData>();
-            id = -1;
+            if (poolTargets == null || poolTargets.Count == 0)
+                return false;
+
+            return true;
         }
-    }
 
-    class ThreadDetailsBuilder
-    {
-        internal bool IsCalculating;
-        internal Vector3[] Positions;
-        internal int ID;
-        internal bool IsActive;
-        internal bool Lock;
-    }
-
-    [Serializable]
-    struct PooledDetail
-    {
-        [SerializeField] internal GameObject GameObject;
-        internal int ID;
-
-        public PooledDetail(GameObject gameObject, int id)
+        internal void Destroy(int poolID)
         {
-            GameObject = gameObject;
-            ID = id;
+            if (poolTargets == null)
+            {
+                Debug.LogWarning("Pool target was null. id requested: " + poolID);
+                return;
+            }
+
+            availableGameObjects++;
+            poolTargets[poolID] = new PoolTarget(-1, -1);
+            pooledGameObjects[poolID].transform.localPosition = Vector3.zero;
         }
     }
 
     [Serializable]
-    struct DetailData
+    struct PoolTarget
     {
-        internal Vector3 Position;
-        internal int ID;
-        internal int ReferenceID;
-        internal int AssignedPoolID;
+        [SerializeField] private int chunkID;
+        [SerializeField] private int id;
 
-        public DetailData(Vector3 position, int id, int referenceID)
+        internal PoolTarget(int chunkID, int id)
         {
-            Position = position;
-            ID = id;
-            AssignedPoolID = -1;
-            ReferenceID = referenceID;
+            this.chunkID = chunkID;
+            this.id = id;
+        }
+
+        public bool IsAvailable()
+        {
+            if (chunkID == -1 && id == -1)
+            {
+                return true;
+            }
+
+            if (chunkID == -1 || id == -1)
+            {
+                Debug.LogWarning("Mismatching");
+            }
+
+            return false;
+        }
+    }
+
+    [Serializable]
+    class Chunk
+    {
+        [SerializeField] private int _chunkID;
+        [SerializeField] private Vector3[] _positions;
+        [SerializeField] private int[] _referenceID;
+        [SerializeField] private int[] _pooledReferenceID;
+
+        internal Vector3[] GetPositions()
+        {
+            return _positions;
+        }
+
+        internal bool IsAssigned(int id)
+        {
+            if (_pooledReferenceID[id] >= 0)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        internal bool MatchesID(int id)
+        {
+            if (_chunkID == id)
+                return true;
+
+            return false;
+        }
+
+        internal void SetPositions(Vector3[] positions, int chunkID)
+        {
+            if (_positions == null || _positions.Length != positions.Length)
+            {
+                _positions = new Vector3[positions.Length];
+                _referenceID = new int[positions.Length];
+                _pooledReferenceID = new int[positions.Length];
+            }
+
+            ResetChunck(positions);
+            _chunkID = chunkID;
+        }
+
+        void ResetChunck(Vector3[] positions)
+        {
+            for (var i = 0; i < _positions.Length; i++)
+            {
+                _positions[i] = positions[i];
+                _referenceID[i] = -1;
+                _pooledReferenceID[i] = -1;
+            }
+        }
+
+        internal void AssignPool(int id, int referenceID, int poolID)
+        {
+            _referenceID[id] = referenceID;
+            _pooledReferenceID[id] = poolID;
+        }
+
+        internal void ReleasePool(int id)
+        {
+            _referenceID[id] = -1;
+            _pooledReferenceID[id] = -1;
+        }
+
+        internal bool IsAvailable()
+        {
+            if (_chunkID == -1)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        internal bool ResetIfIDMatches(int id, List<Reference> references)
+        {
+            if (_chunkID == id)
+            {
+                for (var i = 0; i < _pooledReferenceID.Length; i++)
+                {
+                    if (_pooledReferenceID[i] != -1)
+                    {
+                        references[_referenceID[i]].pool.Destroy(_pooledReferenceID[i]);
+                    }
+                }
+
+                _chunkID = -1;
+                ResetChunck(_positions);
+            }
+
+            return false;
         }
     }
 }
