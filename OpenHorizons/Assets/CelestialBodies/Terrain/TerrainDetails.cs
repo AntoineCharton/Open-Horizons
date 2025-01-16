@@ -105,7 +105,6 @@ namespace CelestialBodies
                         break;
                     }
                 }
-                
             }
         }
 

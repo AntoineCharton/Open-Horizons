@@ -141,7 +141,7 @@ namespace CelestialBodies.Terrain
             thread.Start();
         }
         
-        internal static void SmartUpdate(this ref Surface surface, Transform transform, TerrainDetails terrainDetails)
+        internal static void SmartUpdate(this ref Surface surface, Transform transform, TerrainDetails terrainDetails, MeshDetail meshDetail)
         {
             if (surface.terrain.Material.mainTexture == null || surface.TerrainFaces == null) // When we loose serialization we want to regenerate the texture
             {
@@ -172,7 +172,7 @@ namespace CelestialBodies.Terrain
             {
                 surface.GenerateMeshLod(surface.TerrainMeshThreadCalculation);
             }
-            surface.AssignMesh(terrainDetails);
+            surface.AssignMesh(terrainDetails, meshDetail);
         }
         
         internal static void Dirty(this ref Surface surface)
@@ -261,7 +261,7 @@ namespace CelestialBodies.Terrain
             return false;
         }
         
-        private static void AssignMesh(this ref Surface surface, TerrainDetails terrainDetails)
+        private static void AssignMesh(this ref Surface surface, TerrainDetails terrainDetails, MeshDetail meshDetail)
         {
             for (var i = 0; i < surface.TerrainFaces.Length; i++)
             {
@@ -280,14 +280,17 @@ namespace CelestialBodies.Terrain
                         
                         if (surface.TerrainFaces[i].TerrainMeshData.IsHighDefinition && surface.UpdateAsync)
                         {
-                            if (terrainDetails.HighDefinition(surface.TerrainFaces[i].TerrainMeshData.Vertices, i, surface.ShapeGenerator.ElevationMinMax))
+                            if (terrainDetails.HighDefinition(surface.TerrainFaces[i].TerrainMeshData.Vertices, i, surface.ShapeGenerator.ElevationMinMax) &&
+                                meshDetail.HighDefinition(i, surface.TerrainFaces[i].TerrainMeshData.Vertices,
+                                    surface.TerrainFaces[i].TerrainMeshData.Triangles, surface.TerrainFaces[i].TerrainMeshData.Normals, surface.ShapeGenerator.ElevationMinMax))
                             {
                                 surface.TerrainFaces[i].TerrainMeshData.IsDoneGeneratingVertex = false;
                             }
+                            
                         }
                         else if(surface.UpdateAsync)
                         {
-                            if (terrainDetails.LowDefinition(i))
+                            if (terrainDetails.LowDefinition(i) && meshDetail.LowDefinition(i))
                             {
                                 surface.TerrainFaces[i].TerrainMeshData.IsDoneGeneratingVertex = false;
                             }
@@ -427,8 +430,20 @@ namespace CelestialBodies.Terrain
                     terrainFace.TerrainMeshData.Triangles[triIndex + 5] = i + resolution + 1;
                     triIndex += 6;
                 }
-                Vector3 pointOnUnitSphere = pointOnUnitCube.normalized;
+                Vector3 pointOnUnitSphere = PointOnCubeToPointOnSphere(pointOnUnitCube);
                 terrainFace.TerrainMeshData.Vertices[i] = terrainFace.ShapeGenerator.CalculatePointOnPlanet(pointOnUnitSphere);
+            }
+
+            static Vector3 PointOnCubeToPointOnSphere(Vector3 p)
+            {
+                float x2 = p.x * p.x;
+                float y2 = p.y * p.y;
+                float z2 = p.z * p.z;
+                float x = p.x * (float) Math.Sqrt(1 - (y2 + z2) / 2 + (y2 * z2) / 3);
+                float y = p.y * (float)  Math.Sqrt(1 - (z2 + x2) / 2 + (z2 * x2) / 3);
+                float z = p.z * (float)  Math.Sqrt(1 - (x2 + y2) / 2 + (x2 * y2) / 3);
+                return new Vector3(x, y, z);
+
             }
         }
 

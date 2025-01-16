@@ -14,10 +14,12 @@ namespace CelestialBodies
         [SerializeField] private Cloud cloud;
         [SerializeField] private Fog fog;
         private TerrainDetails _details;
+        private MeshDetail _meshDetails;
 
         private void Start()
         {
             _details = GetComponent<TerrainDetails>();
+            _meshDetails = GetComponent<MeshDetail>();
             if(Application.isPlaying)
                 fog.Start(gameObject);
         }
@@ -37,7 +39,7 @@ namespace CelestialBodies
         private void Update()
         {
             VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, surface.shape.Radius);
-            surface.SmartUpdate(transform, _details);
+            surface.SmartUpdate(transform, _details, _meshDetails);
             if (Application.isPlaying)
             {
                 fog.Update(surface.shape.Radius);

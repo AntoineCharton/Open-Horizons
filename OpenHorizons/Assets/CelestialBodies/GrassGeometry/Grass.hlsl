@@ -128,38 +128,13 @@ void geom(uint primitiveID : SV_PrimitiveID, triangle Varyings input[3], inout T
 	#ifdef DISTANCE_DETAIL
 		float3 vtcam = cameraPos - positionWS;
 		float distSqr = dot(vtcam, vtcam);
-		int bladeSegments = lerp(BLADE_SEGMENTS, 0, saturate(distSqr * 0.005 - 0.1));
+		int bladeSegments = lerp(BLADE_SEGMENTS, 0, saturate(distSqr * 0.00004 - 0.1));
 	#else
 		int bladeSegments = BLADE_SEGMENTS;
 	#endif
 
 	output.bladeSegments = bladeSegments;
-
-	// -----------------------
-	// Normal Mesh
-	// -----------------------
-
-	float v = 1 - saturate(bladeSegments);
-
-	output.positionWS = input[0].positionWS;
-	output.normalWS = input[0].normal;
-	output.positionCS = WorldToHClip(output.positionWS, output.normalWS);
-	output.uv = float2(0, v);
-	triStream.Append(output);
-
-	output.positionWS = input[1].positionWS;
-	output.normalWS = input[1].normal;
-	output.positionCS = WorldToHClip(output.positionWS, output.normalWS);
-	output.uv = float2(0, v);
-	triStream.Append(output);
-
-	output.positionWS = input[2].positionWS;
-	output.normalWS = input[2].normal;
-	output.positionCS = WorldToHClip(output.positionWS, output.normalWS);
-	output.uv = float2(0, v);
-	triStream.Append(output);
-
-	triStream.RestartStrip();
+	
 
 	if (bladeSegments <= 0){
 		// Too far away, don't render grass blades (should only really be used for first person camera)
