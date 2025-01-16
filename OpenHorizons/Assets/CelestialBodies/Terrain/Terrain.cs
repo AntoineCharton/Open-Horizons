@@ -313,6 +313,10 @@ namespace CelestialBodies.Terrain
             surface.ClosestFaces = new int[highDefinitionFaces];
             surface.PreviousClosestFaces = new int[highDefinitionFaces];
             var subdivision = surface.subdivisions;
+            if (!Application.isPlaying)
+            {
+                subdivision = Mathf.Min(4, subdivision);
+            }
             var subdivisionCount = 6 * (subdivision * subdivision);
             if (surface.meshFilters == null || surface.meshFilters.Length == 0 || surface.meshFilters.Length != subdivisionCount)
             {
@@ -357,7 +361,10 @@ namespace CelestialBodies.Terrain
 
         private static void LazyMeshInitialization(this Surface surface, Transform transform)
         {
-            for (int i = 0; i < 6 * (surface.subdivisions * surface.subdivisions); i++)
+            var subdivision = surface.subdivisions;
+            if(!Application.isPlaying)
+                subdivision = Mathf.Min(subdivision, 4);
+            for (int i = 0; i < 6 * (subdivision * subdivision); i++)
             {
                 if (surface.meshFilters[i] == null)
                 {
