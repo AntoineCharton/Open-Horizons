@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace VertexFragment
+namespace CelestialBodies
 {
     /// <summary>
     /// A double-buffered <see cref="RenderTargetReference"/>.

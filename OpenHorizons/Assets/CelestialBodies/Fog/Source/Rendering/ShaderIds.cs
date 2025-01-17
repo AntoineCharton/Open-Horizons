@@ -5,7 +5,7 @@
  * https://github.com/Unity-Technologies/Graphics/blob/ffa21b54c20545786dd5e691f58f41468f0c153a/com.unity.postprocessing/PostProcessing/Runtime/Utils/ShaderIDs.cs
  */
 
-namespace VertexFragment
+namespace CelestialBodies
 {
     public static class ShaderIds
     {

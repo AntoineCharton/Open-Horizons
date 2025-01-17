@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
-namespace VertexFragment
+namespace CelestialBodies
 {
     /// <summary>
     /// Wrapper around a <see cref="RTHandle"/> that provides convenience methods for common operations.

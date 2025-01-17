@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using VertexFragment;
 
 namespace CelestialBodies
 {
@@ -13,15 +12,18 @@ namespace CelestialBodies
         /// </summary>
         private static readonly List<Fog> FogVolumes = new List<Fog>();
 
+        private static int VolumeID;
         /// <summary>
         /// Black with 0 alpha.
         /// </summary>
-        private static readonly Color ColorNothing = new Color(0, 0, 0, 0);
-
+        private static readonly Color ColorNothing;
+        
         /// <summary>
         /// Are there any fog volumes to render this frame?
         /// </summary>
         private static bool ShouldRender;
+
+        private static bool IsPropertiesDirty;
 
         /// <summary>
         /// The fog volume material instance being used.
@@ -52,7 +54,15 @@ namespace CelestialBodies
 
         public override void OnCameraSetup(CommandBuffer commandBuffer, ref RenderingData renderingData)
         {
-            ShouldRender = FogVolumes.Exists(f => f.gameObject.activeInHierarchy);
+            ShouldRender = false;
+            for (var i = 0; i < FogVolumes.Count; i++)
+            {
+                if (FogVolumes[i].gameObject.activeInHierarchy)
+                {
+                    ShouldRender = true;
+                    break;
+                }
+            }
 
             if (!ShouldRender)
             {
@@ -84,17 +94,21 @@ namespace CelestialBodies
 
             using (new ProfilingScope(commandBuffer, new ProfilingSampler("VolumetricFogPass")))
             {
-                foreach (var fogVolume in FogVolumes)
+                for (var i = 0; i < FogVolumes.Count; i++)
                 {
-                    if (!fogVolume.gameObject.activeInHierarchy)
+                    if (!FogVolumes[i].gameObject.activeInHierarchy)
                     {
                         continue;
                     }
-
-                    fogVolume.Apply(FogMaterialProperties);
+                    var fogVolume = FogVolumes[i];
+                    if(IsPropertiesDirty)
+                        fogVolume.Apply(FogMaterialProperties);
+                    FogVolumes[i] = fogVolume;
 
                     RasterizeColorToTarget(commandBuffer, BufferedFogRenderTarget.BackBuffer.Handle, FogMaterialInstance, BlitGeometry.Quad, 0, FogMaterialProperties);
                 }
+
+                IsPropertiesDirty = false;
 
                 BlitBlendOntoCamera(commandBuffer, BufferedFogRenderTarget.BackBuffer.Handle, ref renderingData);
             }
@@ -115,10 +129,14 @@ namespace CelestialBodies
         /// Adds a <see cref="DepthFog"/> to the render list.
         /// </summary>
         /// <param name="volume"></param>
-        public static void AddFogVolume(Fog volume)
+        public static int AddFogVolume(Fog volume)
         {
+            VolumeID++;
+            volume.id = VolumeID;
             RemoveFogVolume(volume);
             FogVolumes.Add(volume);
+            IsPropertiesDirty = true;
+            return VolumeID;
         }
 
         /// <summary>
@@ -127,7 +145,22 @@ namespace CelestialBodies
         /// <param name="volume"></param>
         public static void RemoveFogVolume(Fog volume)
         {
-            FogVolumes.RemoveAll(f => f == volume);
+            FogVolumes.RemoveAll(f => f.id == volume.id);
+        }
+        
+        internal static void UpdateFogVolume(Fog newVolume)
+        {
+            for (var i = 0; i < FogVolumes.Count; i++)
+            {
+                if (FogVolumes[i].id == newVolume.id)
+                {
+                    FogVolumes[i] = newVolume;
+                    IsPropertiesDirty = true;
+                    return;
+                }
+            }
+            
+            Debug.Log("Couldn't update volume");
         }
     }
 }

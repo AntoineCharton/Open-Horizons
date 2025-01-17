@@ -14,9 +14,10 @@ namespace CelestialBodies
         private int currentIDEvaluated;
         private int currentChunkEvaluated;
         [SerializeField] private List<Reference> _references;
-        [SerializeField] private List<Chunk> _chunks;
+        [SerializeField, HideInInspector] private List<Chunk> _chunks;
         [SerializeField] private float minAltitudeOffset;
         [SerializeField] private float maxAltitudeOffset;
+        [SerializeField] private float plantsDensity = 0.5f;
         private float _minAlitude;
         private float _maxAltitude;
 
@@ -85,19 +86,18 @@ namespace CelestialBodies
             {
                 sum += _references[i].frequence;
             }
-            
             if (!_chunks[currentChunkEvaluated].IsAssigned(currentID) &&
                 !_chunks[currentChunkEvaluated].IsAvailable() && 
                 _minAlitude < Vector3.Distance(Vector3.zero, currentPosition) &&
                 !(_maxAltitude < Vector3.Distance(Vector3.zero, currentPosition)) &&
-                _noise.Evaluate(currentPosition) > 0.1f)
+                (_noise.Evaluate(currentPosition) + 1) / 2 < plantsDensity)
             {
                 var targetValue = 0f;
                 for (int i = 0; i < _references.Count; i++)
                 {
                     targetValue += (_references[i].frequence / sum);
                     //We offset the noise so the blank spots don't affect the noise
-                    if (_noise.Evaluate(currentPosition + new Vector3(1000,0,0)) <= targetValue || i == _references.Count -1)
+                    if ((_noise.Evaluate(currentPosition + new Vector3(1000,0,0))+ 1) / 2 <= targetValue || i == _references.Count -1)
                     {
                         var poolID = _references[i].pool.Instantiate(_references[i].reference, transform,
                             currentPosition, _noise.Evaluate(currentPosition), currentChunkEvaluated, currentID);
@@ -178,16 +178,17 @@ namespace CelestialBodies
     [Serializable]
     class Pool
     {
-        [SerializeField] private List<GameObject> pooledGameObjects;
-        [SerializeField] private List<PoolTarget> poolTargets;
+        private List<GameObject> pooledGameObjects;
+        private List<PoolTarget> poolTargets;
         private int availableGameObjects;
-        [SerializeField]
         private int[] availablePoolIndexes;
         bool findNewIndexes;
         private bool runIndexesSearch;
 
         internal void Initialize(int maxUpdate)
         {
+            pooledGameObjects = new List<GameObject>();
+            poolTargets = new List<PoolTarget>();
             findNewIndexes = false;
             runIndexesSearch = true;
             availablePoolIndexes = new int[maxUpdate];
@@ -351,9 +352,9 @@ namespace CelestialBodies
     class Chunk
     {
         [SerializeField] private int _chunkID;
-        [SerializeField] private Vector3[] _positions;
-        [SerializeField] private int[] _referenceID;
-        [SerializeField] private int[] _pooledReferenceID;
+        private Vector3[] _positions;
+        private int[] _referenceID;
+        private int[] _pooledReferenceID;
 
         internal Vector3[] GetPositions()
         {

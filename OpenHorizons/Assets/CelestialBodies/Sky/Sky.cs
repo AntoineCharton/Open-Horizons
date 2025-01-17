@@ -108,14 +108,13 @@ namespace CelestialBodies.Sky
                 Object.DestroyImmediate(atmosphereGenerator.opticalDepthTexture);
             }
         }
-
         public static void SmartUpdate(this ref AtmosphereGenerator atmosphereGenerator, Transform transform, float radius)
         {
             if (atmosphereGenerator.material == null || atmosphereGenerator.sun == null)
             {
                 return;
             }
-
+            
             atmosphereGenerator.planetRadius = radius + (atmosphereGenerator.radiusOffset / transform.lossyScale.x);
             atmosphereGenerator.oceanRadius = 1 * transform.localScale.x;
             atmosphereGenerator.atmosphere.SetProperties(atmosphereGenerator.material);
@@ -332,19 +331,14 @@ namespace CelestialBodies.Sky
         {
             material.SetInteger(NumInScatteringPoints, inScatteringPoints);
             material.SetInteger(NumOpticalDepthPoints, opticalDepthPoints);
-
             material.SetVector(RayleighScattering, rayleighScatter.Wavelengths);
-
             material.SetVector(MieScattering, mieScatter.Wavelengths);
             material.SetVector(AbsorbtionBeta, absorbtionColor);
             material.SetVector(AmbientBeta, ambientColor);
-
             material.SetFloat(MieG, mieG);
-
             material.SetFloat(RayleighFalloff, rayleighDensityFalloff);
             material.SetFloat(MieFalloff, mieDensityFalloff);
             material.SetFloat(HeightAbsorbtion, heightAbsorbtion);
-
             material.SetFloat(Intensity, sunIntensity);
         }
 
@@ -353,10 +347,8 @@ namespace CelestialBodies.Sky
         {
             shader.SetInt(TextureSize, (int)textureSize);
             shader.SetInt(NumOutScatteringSteps, opticalDepthPoints);
-
             shader.SetFloat(PlanetRadius, planetRadius);
             shader.SetFloat(AtmosphereRadius, atmosphereRadius);
-
             shader.SetFloat(RayleighFalloff, rayleighDensityFalloff);
             shader.SetFloat(MieFalloff, mieDensityFalloff);
             shader.SetFloat(HeightAbsorbtion, heightAbsorbtion);

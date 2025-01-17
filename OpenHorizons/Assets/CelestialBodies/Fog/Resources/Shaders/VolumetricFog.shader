@@ -224,7 +224,7 @@ Shader "VertexFragment/VolumetricFog"
                 float occludedDistance = worldDepth - rayHit.FrontHitDistance;
                 float nearestCutoff = min(occludedDistance * 5.0f, rayHit.Thickness);
 
-                int stepCount = 50;
+                int stepCount = 5;
                 float stepSize = nearestCutoff / (float)stepCount;
 
                 float3 currPosition = (float3)0;

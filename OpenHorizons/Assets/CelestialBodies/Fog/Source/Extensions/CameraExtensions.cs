@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace VertexFragment
+namespace CelestialBodies
 {
     public static class CameraExtensions
     {

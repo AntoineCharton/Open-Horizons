@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using CelestialBodies;
 using CelestialBodies.Terrain;
 using UnityEngine;
 
@@ -10,6 +11,7 @@ public class MeshDetail : MonoBehaviour
     [SerializeField] private Material Material;
     [SerializeField] private float MinAltitude;
     [SerializeField] private float MaxAltitude;
+    [SerializeField] private GameObject reference;
     private float _minAltitude;
     private float _maxAltitude;
     private int currentUpdatedMesh;
@@ -21,15 +23,14 @@ public class MeshDetail : MonoBehaviour
 
     void Update()
     {
-        var camera = Camera.main;
         if (currentUpdatedMesh > _detailMeshes.Count - 1)
         {
             currentUpdatedMesh = 0;
         }
         if(_detailMeshes.Count > 0)
         {
-        _detailMeshes[currentUpdatedMesh].UpdateMesh();
-        currentUpdatedMesh++;
+            _detailMeshes[currentUpdatedMesh].UpdateMesh(transform);
+            currentUpdatedMesh++;
         }
     }
 
@@ -76,7 +77,7 @@ public class MeshDetail : MonoBehaviour
 
         if (!foundDetailMesh)
         {
-            var newDetailMesh = new DetailMesh(gameObject, chunkID, Material, vertices, indexes, normals, _minAltitude, _maxAltitude);
+            var newDetailMesh = new DetailMesh(gameObject, chunkID, Material, vertices, indexes, normals, _minAltitude, _maxAltitude, reference);
             _detailMeshes.Add(newDetailMesh);
         }
 
@@ -115,10 +116,14 @@ class DetailMesh
     private bool runCalculationThread;
     private float _minAltitude;
     private float _maxAltitude;
+    private GameObject _reference;
+    private List<GameObject> pool;
+    private Noise _noise;
 
     internal DetailMesh(GameObject parent, int id, Material material, Vector3[] vertices, int[] indexes,
-        Vector3[] normals, float minAltitude, float maxAltitude)
+        Vector3[] normals, float minAltitude, float maxAltitude, GameObject reference)
     {
+        _noise = new Noise();
         this.vertices = vertices;
         this.indexes = indexes;
         this.normals = normals;
@@ -135,6 +140,7 @@ class DetailMesh
         runCalculationThread = true;
         Thread thread = new Thread(CalculateTriangles);
         thread.Start();
+        _reference = reference;
     }
 
     internal void DisposeThread()
@@ -142,12 +148,13 @@ class DetailMesh
         runCalculationThread = false;
     }
 
-    internal void UpdateMesh()
+    internal void UpdateMesh(Transform parent)
     {
         
         if (finishedCalculation)
         {
             AssignTriangles();
+            AddDetails(parent);
             finishedCalculation = false;
         }
         else if (!submitedCalculation)
@@ -157,6 +164,43 @@ class DetailMesh
 
     }
 
+
+    void AddDetails(Transform parent)
+    {
+        if (pool == null)
+            pool = new List<GameObject>();
+        
+        for (var i = 0; i < pool.Count; i++)
+        {
+            pool[i].transform.position = Vector3.one * 10000;
+        }
+        
+        for (var i = 0; i < trianglesIndexes.Length; i = i + 3)
+        {
+            var first = trianglesIndexes[i];
+            var second = trianglesIndexes[i + 1];
+            var third = trianglesIndexes[i + 2];
+            var position =  Vector3.Lerp(vertices[first], vertices[second], (_noise.Evaluate(vertices[first]) + 1) / 2);
+            position = Vector3.Lerp(position, vertices[third], (_noise.Evaluate(vertices[first] + new Vector3(1000, 0 ,0)) + 1) / 2);
+            GameObject gameObject;
+            if (pool.Count - 1 < i / 3)
+            {
+                gameObject = GameObject.Instantiate(_reference, position, Quaternion.identity);
+                pool.Add(gameObject);
+            }
+            else
+            {
+                gameObject = pool[i / 3];
+            }
+            
+            gameObject.transform.parent = parent;
+            gameObject.transform.localPosition = position;
+            gameObject.transform.LookAt(parent.position, Vector3.back);
+            gameObject.transform.Rotate(Vector3.up, -90, Space.Self);
+            gameObject.transform.Rotate(Vector3.right, 0, Space.Self);
+        }
+    }
+    
     void SumbitCalculation()
     {
         submitedCalculation = true;
@@ -258,147 +302,5 @@ class DetailMesh
         mesh.triangles = trianglesIndexes;
         mesh.RecalculateNormals();
         _meshFilter.mesh = mesh;
-    }
-}
-
-public class MeshHelper
-{
-    static List<Vector3> vertices;
-    static List<Vector3> normals;
-    // [... all other vertex data arrays you need]
-
-    static List<int> indices;
-    static Dictionary<uint, int> newVectices;
-
-    static int GetNewVertex(int i1, int i2)
-    {
-        // We have to test both directions since the edge
-        // could be reversed in another triangle
-        uint t1 = ((uint)i1 << 16) | (uint)i2;
-        uint t2 = ((uint)i2 << 16) | (uint)i1;
-        if (newVectices.ContainsKey(t2))
-            return newVectices[t2];
-        if (newVectices.ContainsKey(t1))
-            return newVectices[t1];
-        // generate vertex:
-        int newIndex = vertices.Count;
-        newVectices.Add(t1, newIndex);
-
-        // calculate new vertex
-        vertices.Add((vertices[i1] + vertices[i2]) * 0.5f);
-        normals.Add((normals[i1] + normals[i2]).normalized);
-        // [... all other vertex data arrays]
-
-        return newIndex;
-    }
-
-    public static void RemoveUnusedVertices(Mesh aMesh)
-    {
-        Vector3[] vertices = aMesh.vertices;
-        Vector3[] normals = aMesh.normals;
-        Vector4[] tangents = aMesh.tangents;
-        Vector2[] uv = aMesh.uv;
-        Vector2[] uv2 = aMesh.uv2;
-        List<int> indices = new List<int>();
-
-        Dictionary<int, int> vertMap = new Dictionary<int, int>(vertices.Length);
-
-        List<Vector3> newVerts = new List<Vector3>(vertices.Length);
-        List<Vector3> newNormals = new List<Vector3>(vertices.Length);
-        List<Vector4> newTangents = new List<Vector4>(vertices.Length);
-        List<Vector2> newUV = new List<Vector2>(vertices.Length);
-        List<Vector2> newUV2 = new List<Vector2>(vertices.Length);
-
-        System.Func<int, int> remap = (int aIndex) =>
-        {
-            int res = -1;
-            if (!vertMap.TryGetValue(aIndex, out res))
-            {
-                res = newVerts.Count;
-                vertMap.Add(aIndex, res);
-                newVerts.Add(vertices[aIndex]);
-                if (normals != null && normals.Length > 0)
-                    newNormals.Add(normals[aIndex]);
-                if (tangents != null && tangents.Length > 0)
-                    newTangents.Add(tangents[aIndex]);
-                if (uv != null && uv.Length > 0)
-                    newUV.Add(uv[aIndex]);
-                if (uv2 != null && uv2.Length > 0)
-                    newUV2.Add(uv2[aIndex]);
-            }
-
-            return res;
-        };
-        for (int subMeshIndex = 0; subMeshIndex < aMesh.subMeshCount; subMeshIndex++)
-        {
-            var topology = aMesh.GetTopology(subMeshIndex);
-            indices.Clear();
-            aMesh.GetIndices(indices, subMeshIndex);
-            for (int i = 0; i < indices.Count; i++)
-            {
-                indices[i] = remap(indices[i]);
-            }
-
-            aMesh.SetIndices(indices, topology, subMeshIndex);
-        }
-
-        aMesh.SetVertices(newVerts);
-        if (newNormals.Count > 0)
-            aMesh.SetNormals(newNormals);
-        if (newTangents.Count > 0)
-            aMesh.SetTangents(newTangents);
-        if (newUV.Count > 0)
-            aMesh.SetUVs(0, newUV);
-        if (newUV2.Count > 0)
-            aMesh.SetUVs(1, newUV2);
-    }
-
-
-    public static void Subdivide(Mesh mesh)
-    {
-        newVectices = new Dictionary<uint, int>();
-
-        vertices = new List<Vector3>(mesh.vertices);
-        normals = new List<Vector3>(mesh.normals);
-        // [... all other vertex data arrays]
-        indices = new List<int>();
-
-        int[] triangles = mesh.triangles;
-        for (int i = 0; i < triangles.Length; i += 3)
-        {
-            int i1 = triangles[i + 0];
-            int i2 = triangles[i + 1];
-            int i3 = triangles[i + 2];
-
-            int a = GetNewVertex(i1, i2);
-            int b = GetNewVertex(i2, i3);
-            int c = GetNewVertex(i3, i1);
-            indices.Add(i1);
-            indices.Add(a);
-            indices.Add(c);
-            indices.Add(i2);
-            indices.Add(b);
-            indices.Add(a);
-            indices.Add(i3);
-            indices.Add(c);
-            indices.Add(b);
-            indices.Add(a);
-            indices.Add(b);
-            indices.Add(c); // center triangle
-        }
-
-        mesh.vertices = vertices.ToArray();
-        mesh.normals = normals.ToArray();
-        // [... all other vertex data arrays]
-        mesh.triangles = indices.ToArray();
-
-        // since this is a static function and it uses static variables
-        // we should erase the arrays to free them:
-        newVectices = null;
-        vertices = null;
-        normals = null;
-        // [... all other vertex data arrays]
-
-        indices = null;
     }
 }

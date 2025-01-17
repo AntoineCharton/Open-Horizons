@@ -120,17 +120,17 @@ Material:
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
-    - _CloudNearPlane: 85977.19
+    - _CloudNearPlane: 490.99762
     - _Cull: 2
     - _Cutoff: 0.5
-    - _DensityMultiplier: 0.057800002
+    - _DensityMultiplier: 0.084872
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EarthCurvature: 0
     - _EarthPosition: 6378100
-    - _EarthRadius: 60000
+    - _EarthRadius: 30000
     - _EnvironmentReflections: 1
     - _ErosionFactor: 0.406
     - _ErosionFactorCompensation: 1
@@ -142,10 +142,10 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _HighestCloudAltitude: 63500
-    - _LowestCloudAltitude: 61000
+    - _HighestCloudAltitude: 31946.5
+    - _LowestCloudAltitude: 30492.5
     - _MaxStep: 24
-    - _MaxStepSize: 312.5
+    - _MaxStepSize: 181.75
     - _MediumWindSpeed: 1
     - _Metallic: 0
     - _MicroErosionFactor: 0.481
@@ -160,8 +160,8 @@ Material:
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _Seed: 0
-    - _ShapeFactor: 0.739
-    - _ShapeScale: 1.47
+    - _ShapeFactor: 0.767
+    - _ShapeScale: 2.86
     - _SmallWindSpeed: 0.25
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
@@ -182,7 +182,7 @@ Material:
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _EarthPosition: {r: 60275, g: 0, b: -3622, a: 0}
+    - _EarthPosition: {r: 28240, g: 0, b: -11329, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _GroundColor: {r: 0.36899996, g: 0.34899998, b: 0.34099993, a: 1}
     - _ScatteringTint: {r: 0.33962268, g: 0.38323253, b: 0.33962268, a: 0.25}
@@ -190,7 +190,7 @@ Material:
     - _SkyTint: {r: 0.5, g: 0.5, b: 0.5, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
     - _WindDirection: {r: 0.9848077, g: 0.17364822, b: 0, a: 0}
-    - _WindVector: {r: 2319.4458, g: 408.98206, b: 0, a: 0}
+    - _WindVector: {r: 56.736057, g: 10.004101, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
 --- !u!114 &4204168956660823475

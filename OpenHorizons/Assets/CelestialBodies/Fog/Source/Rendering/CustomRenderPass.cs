@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
-using VertexFragment;
+using CelestialBodies;
 
 namespace CelestialBodies
 {

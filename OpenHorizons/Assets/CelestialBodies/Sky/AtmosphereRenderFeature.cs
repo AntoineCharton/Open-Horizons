@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEditor;
+using UnityEngine.Profiling;
 
 
 #if UNITY_EDITOR
@@ -46,14 +47,18 @@ namespace CelestialBodies.Sky
         private SortedEffect visibleEffects;
 
         private Plane[] cameraPlanes;
-
-
+        
         private void CullAndSortEffects(Camera camera)
         {
+            Profiler.BeginSample("Cull atmosphere");
             if(currentActiveEffect == null)
                 return;
+            if (cameraPlanes == null || cameraPlanes.Length != 6)
+            {
+                cameraPlanes = new Plane[6];
+            }
             // Perform culling of active effects
-            cameraPlanes = GeometryUtility.CalculateFrustumPlanes(camera);
+            GeometryUtility.CalculateFrustumPlanes(camera, cameraPlanes);
             
             if (currentActiveEffect.IsVisible(cameraPlanes))
             {
@@ -62,19 +67,20 @@ namespace CelestialBodies.Sky
                     effect = currentActiveEffect,
                 };
             }
+            Profiler.EndSample();
         }
 
 
         public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
         {
             BlitUtility.SetupBlitTargets(cmd, renderingData.cameraData.cameraTargetDescriptor);
-
             CullAndSortEffects(renderingData.cameraData.camera);
         }
 
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
+            Profiler.BeginSample("Execute Atmophere Effect");
             if(currentActiveEffect == null)
                 return;
             CommandBuffer cmd = CommandBufferPool.Get("Atmosphere Effects");
@@ -106,6 +112,7 @@ namespace CelestialBodies.Sky
 
             context.ExecuteCommandBuffer(cmd);
             CommandBufferPool.Release(cmd);
+            Profiler.EndSample();
         }
 
 

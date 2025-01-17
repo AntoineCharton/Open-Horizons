@@ -1,4 +1,3 @@
-using System;
 using CelestialBodies.Clouds.Rendering;
 using CelestialBodies.Terrain;
 using CelestialBodies.Sky;
@@ -9,10 +8,11 @@ namespace CelestialBodies
     [ExecuteAlways]
     public class Planet : MonoBehaviour, IAtmosphereEffect
     {
-        [SerializeField] private Surface surface;
+        [SerializeField] internal TerrainSurface terrainSurface = TerrainSurface.Default();
         [SerializeField] internal AtmosphereGenerator sky;
         [SerializeField] private Cloud cloud;
-        [SerializeField] private Fog fog;
+        [SerializeField] private Fog fog = Fog.Default();
+        [SerializeField] private Ocean ocean;
         private TerrainDetails _details;
         private MeshDetail _meshDetails;
 
@@ -33,24 +33,30 @@ namespace CelestialBodies
         private void OnValidate()
         {
             sky.UpdateAtmosphereEffect(this);
-            surface.Dirty();
+            terrainSurface.Dirty();
+            ocean.Dirty();
+            if (Application.isPlaying)
+            {
+                fog.UpdateFogSettings();
+            }
         }
 
         private void Update()
         {
-            VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, surface.shape.Radius);
-            surface.SmartUpdate(transform, _details, _meshDetails);
+            VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, terrainSurface.Surface.shape.Radius);
+            terrainSurface.SmartUpdate(transform, _details, _meshDetails);
+            ocean.SmartUpdate(transform);
             if (Application.isPlaying)
             {
-                fog.Update(surface.shape.Radius);
-                surface.SwitchToAsyncUpdate();
+                fog.Update(terrainSurface.Surface.shape.Radius);
+                terrainSurface.SwitchToAsyncUpdate();
             }
         }
 
         private void LateUpdate()
         {
-            sky.SmartUpdate(transform, surface.shape.Radius);
-            surface.UpdateMeshResolution();
+            sky.SmartUpdate(transform, terrainSurface.Surface.shape.Radius);
+            terrainSurface.UpdateMeshResolution();
         }
 
         private void OnDisable()
@@ -62,8 +68,8 @@ namespace CelestialBodies
         {
             if(Application.isPlaying)
                 fog.Destroy();
-            surface.Cleanup();
-            surface.SwitchToParrallelUpdate();
+            terrainSurface.Cleanup();
+            terrainSurface.SwitchToParrallelUpdate();
         }
 
         public void AtmosphereActive(bool isActive)
@@ -76,16 +82,19 @@ namespace CelestialBodies
         public void CloudsActive(bool isActive)
         {
             cloud.Visible = isActive;
-            if (!cloud.Visible && surface.highResolution != 256)
+            if (!cloud.Visible && terrainSurface.Surface.highResolution != 256)
             {
-                surface.highResolution = 256;
-                surface.Dirty = true;
+                var newSurface = terrainSurface.Surface;
+                newSurface.highResolution = 256;
+                newSurface.highResolution = 256;
+                newSurface.Dirty = true;
+                terrainSurface.SetSurface(newSurface);
             }
         }
 
         public Bounds GetBounds()
         {
-            return surface.GetBounds(transform);
+            return terrainSurface.Surface.GetBounds(transform);
         }
 
         public Material GetMaterial(Shader atmosphereShader)
