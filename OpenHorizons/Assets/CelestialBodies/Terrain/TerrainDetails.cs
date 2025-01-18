@@ -49,28 +49,43 @@ namespace CelestialBodies
                 if(!_references[i].pool.HasFoundAvailableIndexes())
                     return;
             }
-                
+
+            var currentID = currentIDEvaluated;
             for (var i = 0; i < UpdatePerFrames; i++)
             {
-                var currentID = i + currentIDEvaluated;
-                if (currentPositions.Length == currentID)
+                currentID ++;
+                var foundDetail = false;
+                var stopLooping = false;
+                while (foundDetail == false)
                 {
-                    currentChunkEvaluated++;
-                    currentIDEvaluated = 0;
-                    loopedCurrentIDs = true;
-                    if (_chunks.Count == currentChunkEvaluated)
+                    if (currentPositions.Length <= currentID)
                     {
-                        currentChunkEvaluated = 0;
-                    }
-                    break;
-                }
+                        currentChunkEvaluated++;
+                        currentIDEvaluated = 0;
+                        loopedCurrentIDs = true;
+                        if (_chunks.Count == currentChunkEvaluated)
+                        {
+                            currentChunkEvaluated = 0;
+                        }
 
-                EvaluateDetail(currentID,currentPositions[currentID]);
+                        stopLooping = true;
+                        break;
+                    }
+    
+                    foundDetail = EvaluateDetail(currentID,currentPositions[currentID]);
+                    if (!foundDetail)
+                    {
+                        currentID++;
+                    }
+                }
+                
+                if(stopLooping)
+                    break;
             }
 
             if (!loopedCurrentIDs)
             {
-                currentIDEvaluated += UpdatePerFrames;
+                currentIDEvaluated = currentID;
             }
 
             for (var i = 0; i < _references.Count; i++)
@@ -79,9 +94,10 @@ namespace CelestialBodies
             }
         }
 
-        void EvaluateDetail(int currentID, Vector3 currentPosition)
+        bool EvaluateDetail(int currentID, Vector3 currentPosition)
         {
             var sum = 0f;
+            var foundDetail = false;
             for (var i = 0; i < _references.Count; i++)
             {
                 sum += _references[i].frequence;
@@ -102,10 +118,13 @@ namespace CelestialBodies
                         var poolID = _references[i].pool.Instantiate(_references[i].reference, transform,
                             currentPosition, _noise.Evaluate(currentPosition), currentChunkEvaluated, currentID);
                         _chunks[currentChunkEvaluated].AssignPool(currentID, i, poolID);
+                        foundDetail = true;
                         break;
                     }
                 }
             }
+
+            return foundDetail;
         }
 
         bool AlreadyContainsID(int id)

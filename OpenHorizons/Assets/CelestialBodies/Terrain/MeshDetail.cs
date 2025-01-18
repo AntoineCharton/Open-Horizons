@@ -91,7 +91,6 @@ public class MeshDetail : MonoBehaviour
             if (_detailMeshes[i].id == id)
                 return true;
         }
-
         return false;
     }
 }
@@ -261,7 +260,7 @@ class DetailMesh
                 closestTriangles.Sort((a, b) => a.distance.CompareTo(b.distance));
 
                 // Get the top 10 closest triangles
-                int count = Mathf.Min(500, numberOfTrianglesDrawn);
+                int count = Mathf.Min(1000, numberOfTrianglesDrawn);
                 if (trianglesIndexes == null || trianglesIndexes.Length != count * 3)
                     trianglesIndexes = new int[count * 3];
                 for (int j = 0; j < count; j++)
