@@ -14,6 +14,7 @@ public class MeshDetail : MonoBehaviour
     [SerializeField] private GameObject reference;
     private float _minAltitude;
     private float _maxAltitude;
+    private float _stepThreshold;
     private int currentUpdatedMesh;
 
     private void Awake()
@@ -55,7 +56,7 @@ public class MeshDetail : MonoBehaviour
         }
     }
 
-    public bool HighDefinition(int chunkID, Vector3[] vertices, int[] indexes, Vector3[] normals, MinMax minMax)
+    public bool HighDefinition(int chunkID, Vector3[] vertices, int[] indexes, Vector3[] normals, Color [] vertexColors, float stepThreshold, MinMax minMax)
     {
         _minAltitude = minMax.Min + MinAltitude;
         _maxAltitude = minMax.Max - MaxAltitude;
@@ -70,6 +71,7 @@ public class MeshDetail : MonoBehaviour
                 _detailMeshes[i].vertices = vertices;
                 _detailMeshes[i].indexes = indexes;
                 _detailMeshes[i].normals = normals;
+                _detailMeshes[i].CopyVertexColors(vertexColors);
                 foundDetailMesh = true;
                 break;
             }
@@ -77,7 +79,8 @@ public class MeshDetail : MonoBehaviour
 
         if (!foundDetailMesh)
         {
-            var newDetailMesh = new DetailMesh(gameObject, chunkID, Material, vertices, indexes, normals, _minAltitude, _maxAltitude, reference);
+            _stepThreshold = stepThreshold;
+            var newDetailMesh = new DetailMesh(gameObject, chunkID, Material, vertices, vertexColors, indexes, normals, _minAltitude, _maxAltitude, stepThreshold, reference);
             _detailMeshes.Add(newDetailMesh);
         }
 
@@ -100,6 +103,7 @@ class DetailMesh
     internal int id;
     internal Vector3[] vertices;
     internal int[] indexes;
+    internal Color[] vertexColor;
     internal Vector3[] normals;
     internal MeshRenderer _meshRenderer;
     internal MeshFilter _meshFilter;
@@ -115,31 +119,48 @@ class DetailMesh
     private bool runCalculationThread;
     private float _minAltitude;
     private float _maxAltitude;
+    private float _stepThreshold;
     private GameObject _reference;
     private List<GameObject> pool;
     private Noise _noise;
 
-    internal DetailMesh(GameObject parent, int id, Material material, Vector3[] vertices, int[] indexes,
-        Vector3[] normals, float minAltitude, float maxAltitude, GameObject reference)
+    internal DetailMesh(GameObject parent, int id, Material material, Vector3[] vertices, Color [] vertexColor, int[] indexes,
+        Vector3[] normals, float minAltitude, float maxAltitude, float stepThreshold, GameObject reference)
     {
         _noise = new Noise();
         this.vertices = vertices;
+        CopyVertexColors(vertexColor);
         this.indexes = indexes;
         this.normals = normals;
         _minAltitude = minAltitude;
         _maxAltitude = maxAltitude;
+        _stepThreshold = stepThreshold;
         var newMesh = new GameObject("Detail Mesh");
         newMesh.transform.parent = parent.transform;
         newMesh.transform.localPosition = Vector3.zero;
         newMesh.transform.rotation = Quaternion.identity;
         _meshRenderer = newMesh.AddComponent<MeshRenderer>();
         _meshRenderer.material = material;
+        _meshRenderer.sharedMaterial.SetFloat("_GrassSupression", stepThreshold);;
         _meshFilter = newMesh.AddComponent<MeshFilter>();
         this.id = id;
         runCalculationThread = true;
         Thread thread = new Thread(CalculateTriangles);
         thread.Start();
         _reference = reference;
+    }
+
+    internal void CopyVertexColors(Color [] vertexColorToCopy)
+    {
+        if (vertexColor == null || vertexColor.Length != vertexColorToCopy.Length)
+        {
+            vertexColor = new Color[vertexColorToCopy.Length];
+        }
+
+        for (var i = 0; i < vertexColorToCopy.Length; i++)
+        {
+            vertexColor[i] = vertexColorToCopy[i];
+        }
     }
 
     internal void DisposeThread()
@@ -162,8 +183,7 @@ class DetailMesh
         }
 
     }
-
-
+    
     void AddDetails(Transform parent)
     {
         if (pool == null)
@@ -182,21 +202,24 @@ class DetailMesh
             var position =  Vector3.Lerp(vertices[first], vertices[second], (_noise.Evaluate(vertices[first]) + 1) / 2);
             position = Vector3.Lerp(position, vertices[third], (_noise.Evaluate(vertices[first] + new Vector3(1000, 0 ,0)) + 1) / 2);
             GameObject gameObject;
-            if (pool.Count - 1 < i / 3)
+            if (vertexColor[first].r < _stepThreshold)
             {
-                gameObject = GameObject.Instantiate(_reference, position, Quaternion.identity);
-                pool.Add(gameObject);
+                if (pool.Count - 1 < i / 3)
+                {
+                    gameObject = GameObject.Instantiate(_reference, position, Quaternion.identity);
+                    pool.Add(gameObject);
+                }
+                else
+                {
+                    gameObject = pool[i / 3];
+                }
+
+                gameObject.transform.parent = parent;
+                gameObject.transform.localPosition = position;
+                gameObject.transform.LookAt(parent.position, Vector3.back);
+                gameObject.transform.Rotate(Vector3.up, -90, Space.Self);
+                gameObject.transform.Rotate(Vector3.right, 0, Space.Self);
             }
-            else
-            {
-                gameObject = pool[i / 3];
-            }
-            
-            gameObject.transform.parent = parent;
-            gameObject.transform.localPosition = position;
-            gameObject.transform.LookAt(parent.position, Vector3.back);
-            gameObject.transform.Rotate(Vector3.up, -90, Space.Self);
-            gameObject.transform.Rotate(Vector3.right, 0, Space.Self);
         }
     }
     
@@ -240,14 +263,20 @@ class DetailMesh
 
                     // Calculate the distance from the camera to the face center
                     float distance = Vector3.Distance(targetPosition, faceCenter);
-                    if (distance < 500  && _minAltitude < Vector3.Distance(Vector3.zero, vertices[triangles[j]]) &&
-                        !(_maxAltitude < Vector3.Distance(Vector3.zero, vertices[triangles[j]])))
+                    if(_minAltitude > Vector3.Distance(Vector3.zero, vertices[triangles[j]]) || _maxAltitude < Vector3.Distance(Vector3.zero, vertices[triangles[j]]))
+                    {
+                        vertexColor[triangles[j]] = new Color(1, vertexColor[triangles[j]].g,
+                            vertexColor[triangles[j]].b, vertexColor[triangles[j]].a);
+                    }
+                    
+                    if (distance < 500 )
                     {
                         numberOfTrianglesDrawn++;
                     } else
                     {
                         distance = float.MaxValue;
                     }
+                    
                     if (closestTriangles.Count - 1 < j)
                         closestTriangles.Add((distance, faceCenter, j / 3));
                     else
@@ -260,15 +289,24 @@ class DetailMesh
                 closestTriangles.Sort((a, b) => a.distance.CompareTo(b.distance));
 
                 // Get the top 10 closest triangles
-                int count = Mathf.Min(1000, numberOfTrianglesDrawn);
+                int count = Mathf.Min(750, numberOfTrianglesDrawn);
                 if (trianglesIndexes == null || trianglesIndexes.Length != count * 3)
                     trianglesIndexes = new int[count * 3];
                 for (int j = 0; j < count; j++)
                 {
                     var triangle = closestTriangles[j];
-                    trianglesIndexes[(j * 3)] = triangles[triangle.triangleIndex * 3];
-                    trianglesIndexes[(j * 3) + 1] = triangles[(triangle.triangleIndex * 3) + 1];
-                    trianglesIndexes[(j * 3) + 2] = triangles[(triangle.triangleIndex * 3) + 2];
+                    if (triangle.distance < float.MaxValue -1)
+                    {
+                        trianglesIndexes[(j * 3)] = triangles[triangle.triangleIndex * 3];
+                        trianglesIndexes[(j * 3) + 1] = triangles[(triangle.triangleIndex * 3) + 1];
+                        trianglesIndexes[(j * 3) + 2] = triangles[(triangle.triangleIndex * 3) + 2];
+                    }
+                    else
+                    {
+                        trianglesIndexes[(j * 3)] = 0;
+                        trianglesIndexes[(j * 3) + 1] = 0;
+                        trianglesIndexes[(j * 3) + 2] = 0;
+                    }
                 }
 
                 finishedCalculation = true;
@@ -298,6 +336,7 @@ class DetailMesh
     {
         var mesh = new Mesh();
         mesh.vertices = vertices;
+        mesh.colors = vertexColor;
         mesh.triangles = trianglesIndexes;
         mesh.RecalculateNormals();
         _meshFilter.mesh = mesh;

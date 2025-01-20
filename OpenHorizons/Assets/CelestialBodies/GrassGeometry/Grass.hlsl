@@ -7,12 +7,14 @@ struct Attributes {
 	float4 positionOS   : POSITION;
 	float3 normal		: NORMAL;
 	float4 tangent		: TANGENT;
+	float4 vertexColor  : COLOR0;
 	float2 texcoord     : TEXCOORD0;
 };
 
 struct Varyings {
 	//float4 positionOS   : SV_POSITION;
 	float3 positionWS	: TEXCOORD1;
+	float4 vertexColor  : COLOR0;
 	float3 positionVS	: TEXCOORD2;
 	float3 normal		: TEXCOORD3;
 	float4 tangent		: TEXCOORD4;
@@ -21,6 +23,7 @@ struct Varyings {
 
 struct GeometryOutput {
 	float4 positionCS	: SV_POSITION;
+	float4 vertexColor  : COLOR0;
 	float3 positionWS	: TEXCOORD1;
 	float3 normalWS		: TEXCOORD3;
 	float2 uv			: TEXCOORD0;
@@ -83,6 +86,7 @@ float _RandomWidth;
 float _Height;
 float _RandomHeight;
 float _WindStrength;
+float _GrassSupression;
 float _TessellationUniform; // Used in CustomTesellation.hlsl
 CBUFFER_END
 
@@ -99,7 +103,7 @@ Varyings vert (Attributes input) {
 	// object space / model matrix doesn't seem to work in geom shader? Using world instead.
 	output.positionWS = vertexInput.positionWS;
 	output.positionVS = vertexInput.positionVS;
-
+	output.vertexColor = input.vertexColor;
 	output.normal = TransformObjectToWorldNormal(input.normal);
 	output.tangent = input.tangent;
 	// or maybe
@@ -121,14 +125,14 @@ void geom(uint primitiveID : SV_PrimitiveID, triangle Varyings input[3], inout T
 	// Blade Segment Detail
 	// -----------------------
 	// (blades closer to camera have more detail, should only really be used for first person camera)
-
+	output.vertexColor = input[0].vertexColor;
 	float3 cameraPos = _WorldSpaceCameraPos;
 	float3 positionWS = input[1].positionWS;
 	
 	#ifdef DISTANCE_DETAIL
 		float3 vtcam = cameraPos - positionWS;
 		float distSqr = dot(vtcam, vtcam);
-		int bladeSegments = lerp(BLADE_SEGMENTS, 0, saturate(distSqr * 0.00004 - 0.1));
+		int bladeSegments = lerp(BLADE_SEGMENTS, 0, saturate(distSqr * 0.00003 - 0.1));
 	#else
 		int bladeSegments = BLADE_SEGMENTS;
 	#endif
@@ -146,6 +150,9 @@ void geom(uint primitiveID : SV_PrimitiveID, triangle Varyings input[3], inout T
 		return;
 	}
 
+	// Only render on flat surfaces
+	if(input[0].vertexColor[0] > _GrassSupression + 0.05)
+		return;
 	// -----------------------
 	// Construct World -> Tangent Matrix (for aligning grass with mesh normals)
 	// -----------------------
@@ -185,11 +192,10 @@ void geom(uint primitiveID : SV_PrimitiveID, triangle Varyings input[3], inout T
 
 	float3x3 transformMatrix = mul(tangentToLocal, randRotation);
 	float3x3 transformMatrixWithWind = mul(mul(tangentToLocal, windMatrix), randRotation);
-
 	float bend = rand(positionWS.xyz) - 0.5;
 	float width = _Width + _RandomWidth * (rand(positionWS.zyx) - 0.5);
 	float height = _Height + _RandomHeight * (rand(positionWS.yxz) - 0.5);
-
+	
 	// -----------------------
 	// Handle Geometry
 	// -----------------------

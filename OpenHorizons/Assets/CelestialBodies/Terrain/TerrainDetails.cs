@@ -9,7 +9,7 @@ namespace CelestialBodies
 {
     public class TerrainDetails : MonoBehaviour
     {
-        private const int UpdatePerFrames = 500;
+        private const int UpdatePerFrames = 1000;
         private Noise _noise;
         private int currentIDEvaluated;
         private int currentChunkEvaluated;
@@ -20,6 +20,7 @@ namespace CelestialBodies
         [SerializeField] private float plantsDensity = 0.5f;
         private float _minAlitude;
         private float _maxAltitude;
+        private float _stepThreshold;
 
         private void Awake()
         {
@@ -41,6 +42,7 @@ namespace CelestialBodies
             if (_chunks.Count == 0)
                 return;
             var currentPositions = _chunks[currentChunkEvaluated].GetPositions();
+            var currentColor = _chunks[currentChunkEvaluated].GetVertexColor();
             if (currentPositions.Length == 0)
                 return;
             var loopedCurrentIDs = false;
@@ -56,6 +58,7 @@ namespace CelestialBodies
                 currentID ++;
                 var foundDetail = false;
                 var stopLooping = false;
+                var iterations = 0;
                 while (foundDetail == false)
                 {
                     if (currentPositions.Length <= currentID)
@@ -72,11 +75,15 @@ namespace CelestialBodies
                         break;
                     }
     
-                    foundDetail = EvaluateDetail(currentID,currentPositions[currentID]);
+                    foundDetail = EvaluateDetail(currentID,currentPositions[currentID], currentColor[currentID]);
                     if (!foundDetail)
                     {
                         currentID++;
                     }
+
+                    iterations++;
+                    if(iterations > 10)
+                        break;
                 }
                 
                 if(stopLooping)
@@ -94,7 +101,7 @@ namespace CelestialBodies
             }
         }
 
-        bool EvaluateDetail(int currentID, Vector3 currentPosition)
+        bool EvaluateDetail(int currentID, Vector3 currentPosition, Color vertexColor)
         {
             var sum = 0f;
             var foundDetail = false;
@@ -106,14 +113,15 @@ namespace CelestialBodies
                 !_chunks[currentChunkEvaluated].IsAvailable() && 
                 _minAlitude < Vector3.Distance(Vector3.zero, currentPosition) &&
                 !(_maxAltitude < Vector3.Distance(Vector3.zero, currentPosition)) &&
-                (_noise.Evaluate(currentPosition) + 1) / 2 < plantsDensity)
+                (_noise.Evaluate(currentPosition) + 1) / 2 < plantsDensity &&
+                vertexColor.r < _stepThreshold)
             {
                 var targetValue = 0f;
                 for (int i = 0; i < _references.Count; i++)
                 {
                     targetValue += (_references[i].frequence / sum);
                     //We offset the noise so the blank spots don't affect the noise
-                    if ((_noise.Evaluate(currentPosition + new Vector3(1000,0,0))+ 1) / 2 <= targetValue || i == _references.Count -1)
+                    if ((_noise.Evaluate(currentPosition + new Vector3(1000,0,0))+ 1) / 2 <= targetValue|| i == _references.Count -1)
                     {
                         var poolID = _references[i].pool.Instantiate(_references[i].reference, transform,
                             currentPosition, _noise.Evaluate(currentPosition), currentChunkEvaluated, currentID);
@@ -138,20 +146,20 @@ namespace CelestialBodies
             return false;
         }
 
-        internal bool HighDefinition(Vector3[] positions, int id, MinMax minMax)
+        internal bool HighDefinition(Vector3[] positions, Color [] vertexColors, int id, float stepThreshold, MinMax minMax)
         {
             if (AlreadyContainsID(id))
                 return true;
             
             _minAlitude = minMax.Min + minAltitudeOffset;
             _maxAltitude = minMax.Max - maxAltitudeOffset;
-            
+            _stepThreshold = stepThreshold;
             var foundChunk = false;
             for (int i = 0; i < _chunks.Count; i++)
             {
                 if (_chunks[i].IsAvailable())
                 {
-                    _chunks[i].SetPositions(positions, id);
+                    _chunks[i].SetPositions(positions, vertexColors, id);
                     foundChunk = true;
                     break;
                 }
@@ -159,8 +167,9 @@ namespace CelestialBodies
 
             if (!foundChunk)
             {
+
                 var newChunk = new Chunk();
-                newChunk.SetPositions(positions, id);
+                newChunk.SetPositions(positions, vertexColors, id);
                 _chunks.Add(newChunk);
             }
 
@@ -372,12 +381,18 @@ namespace CelestialBodies
     {
         [SerializeField] private int _chunkID;
         private Vector3[] _positions;
+        private Color[] _colors;
         private int[] _referenceID;
         private int[] _pooledReferenceID;
 
         internal Vector3[] GetPositions()
         {
             return _positions;
+        }
+
+        internal Color[] GetVertexColor()
+        {
+            return _colors;
         }
 
         internal bool IsAssigned(int id)
@@ -398,26 +413,28 @@ namespace CelestialBodies
             return false;
         }
 
-        internal void SetPositions(Vector3[] positions, int chunkID)
+        internal void SetPositions(Vector3[] positions, Color [] colors, int chunkID)
         {
             if (_positions == null || _positions.Length != positions.Length)
             {
                 _positions = new Vector3[positions.Length];
                 _referenceID = new int[positions.Length];
                 _pooledReferenceID = new int[positions.Length];
+                _colors = new Color[positions.Length];
             }
 
-            ResetChunck(positions);
+            ResetChunck(positions, colors);
             _chunkID = chunkID;
         }
 
-        void ResetChunck(Vector3[] positions)
+        void ResetChunck(Vector3[] positions, Color[] colors)
         {
             for (var i = 0; i < _positions.Length; i++)
             {
                 _positions[i] = positions[i];
                 _referenceID[i] = -1;
                 _pooledReferenceID[i] = -1;
+                _colors[i] = colors[i];
             }
         }
 
@@ -456,7 +473,7 @@ namespace CelestialBodies
                 }
 
                 _chunkID = -1;
-                ResetChunck(_positions);
+                ResetChunck(_positions, _colors);
             }
 
             return false;

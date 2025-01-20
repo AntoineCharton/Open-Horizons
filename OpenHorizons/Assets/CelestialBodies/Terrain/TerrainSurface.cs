@@ -14,11 +14,14 @@ namespace CelestialBodies.Terrain
         
         private static readonly int ElevationMinMax = Shader.PropertyToID("_ElevationMinMax");
         private static readonly int MainTexture = Shader.PropertyToID("_MainTex");
-        private static readonly int OceanColor = Shader.PropertyToID("_BaseColor");
         private static readonly int GroundTex = Shader.PropertyToID("_GroundTex");
         private static readonly int GroundTexBlend = Shader.PropertyToID("_GroundTexBlend");
         private static readonly int GroundNorm = Shader.PropertyToID("_GroundNorm");
         private static readonly int GroundSmooth = Shader.PropertyToID("_GroundSmooth");
+        private static readonly int StepThreshold = Shader.PropertyToID("_StepThreshold");
+        private static readonly int StepColor = Shader.PropertyToID("_StepTint");
+        private static readonly int TextureStep = Shader.PropertyToID("_TextureStep");
+        private static readonly int TextureNormalStep = Shader.PropertyToID("_TextureNormalStep");
         private const int highDefinitionFaces = 4; 
 
         internal static void Cleanup(this TerrainSurface terrainSurface)
@@ -339,13 +342,17 @@ namespace CelestialBodies.Terrain
                         surface.TerrainFaces[i].Mesh.vertices = surface.TerrainFaces[i].TerrainMeshData.Vertices;
                         surface.TerrainFaces[i].Mesh.triangles = surface.TerrainFaces[i].TerrainMeshData.Triangles;
                         surface.TerrainFaces[i].Mesh.normals = surface.TerrainFaces[i].TerrainMeshData.Normals;
+                        surface.TerrainFaces[i].Mesh.colors = surface.TerrainFaces[i].TerrainMeshData.VertexColor;
                         var terrainDetailReady = true;
                         var meshDetailReady = true;
                         if (surface.TerrainFaces[i].TerrainMeshData.IsHighDefinition && surface.UpdateAsync)
                         {
                             if (terrainDetails != null)
                                 terrainDetailReady = terrainDetails.HighDefinition(
-                                    surface.TerrainFaces[i].TerrainMeshData.Vertices, i,
+                                    surface.TerrainFaces[i].TerrainMeshData.Vertices,
+                                    surface.TerrainFaces[i].TerrainMeshData.VertexColor,
+                                    i,
+                                    surface.TerrainFaces[i].StepThreshold,
                                     surface.ShapeGenerator.ElevationMinMax);
 
                             if (meshDetail != null)
@@ -353,6 +360,8 @@ namespace CelestialBodies.Terrain
                                     surface.TerrainFaces[i].TerrainMeshData.Vertices,
                                     surface.TerrainFaces[i].TerrainMeshData.Triangles,
                                     surface.TerrainFaces[i].TerrainMeshData.Normals,
+                                    surface.TerrainFaces[i].TerrainMeshData.VertexColor,
+                                    surface.TerrainFaces[i].StepThreshold,
                                     surface.ShapeGenerator.ElevationMinMax);
                             
                             if (terrainDetailReady && meshDetailReady)
@@ -447,8 +456,7 @@ namespace CelestialBodies.Terrain
             
             surface.TerrainFaces = new TerrainFace[subdivisionCount];
 
-            Vector3[] direction =
-                { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
+            Vector3[] direction = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
 
             var initialPosition = transform.position;
             var initialRotation = transform.rotation;
@@ -467,7 +475,7 @@ namespace CelestialBodies.Terrain
                     int lineID = j / subdivision;
                     int rowID = j % subdivision;
                     surface.TerrainFaces[id] = new TerrainFace(surface.ShapeGenerator, surface.meshFilters[id].sharedMesh,
-                        surface.minResolution, surface.highResolution,rowID, lineID, subdivision, direction[i]);
+                        surface.minResolution, surface.highResolution,rowID, lineID, subdivision, surface.stepThreshold, direction[i]);
                 }
             }
             
@@ -578,6 +586,7 @@ namespace CelestialBodies.Terrain
                 terrainFace.TerrainMeshData.Vertices = new Vector3[resolution * resolution];
                 terrainFace.TerrainMeshData.Normals = new Vector3[resolution * resolution];
                 terrainFace.TerrainMeshData.Triangles = new int[(resolution - 1) * (resolution - 1) * 6];
+                terrainFace.TerrainMeshData.VertexColor = new Color[resolution * resolution];
             }
 
             terrainFace.TerrainMeshData.IsGeneratingVertex = true;
@@ -587,6 +596,15 @@ namespace CelestialBodies.Terrain
         private static void FinishFaceCalculation(ref TerrainFace terrainFace)
         {
             terrainFace.TerrainMeshData.Normals = RecalculateNormals(terrainFace.TerrainMeshData.Vertices, terrainFace.TerrainMeshData.Triangles);
+            for (var i = 0; i < terrainFace.TerrainMeshData.Vertices.Length; i++)
+            {
+                var vertexPosition = terrainFace.TerrainMeshData.Vertices[i];
+                var normal = terrainFace.TerrainMeshData.Normals[i];
+                Vector3 localUpDir =  vertexPosition.normalized;
+                float steepness = 1 - Vector3.Dot(normal, localUpDir);
+                steepness = Math.Clamp(steepness, 0.0f, 1.0f) / 0.6f;
+                terrainFace.TerrainMeshData.VertexColor[i] = new Color(steepness,  0, 0);
+            }
             terrainFace.TerrainMeshData.IsDoneGeneratingVertex = true;
             terrainFace.TerrainMeshData.IsGeneratingVertex = false;
         }
@@ -615,10 +633,6 @@ namespace CelestialBodies.Terrain
         private static Vector3[] RecalculateNormals(Vector3[] vertices, int[] triangles)
         {
             Vector3[] normals = new Vector3[vertices.Length];
-        
-            // Initialize normals to zero
-            for (int i = 0; i < normals.Length; i++)
-                normals[i] = Vector3.zero;
 
             // Calculate normals per triangle
             for (int i = 0; i < triangles.Length; i += 3)
@@ -743,6 +757,10 @@ namespace CelestialBodies.Terrain
             terrainSurface.Material.SetTexture(GroundNorm, terrainSurface.ColorGenerator.GroundTextureNormals);
             terrainSurface.Material.SetFloat(GroundTexBlend, terrainSurface.ColorGenerator.GroundTextureBlend);
             terrainSurface.Material.SetFloat(GroundSmooth, terrainSurface.GroundSmooth);
+            terrainSurface.Material.SetFloat(StepThreshold, terrainSurface.Surface.stepThreshold);
+            terrainSurface.Material.SetColor(StepColor, terrainSurface.StepColor);
+            terrainSurface.Material.SetTexture(TextureStep, terrainSurface.TextureStep);
+            terrainSurface.Material.SetTexture(TextureNormalStep, terrainSurface.TextureNormalStep);
         }
 
         internal static void SwitchToAsyncUpdate(this ref TerrainSurface terrainSurface)
@@ -795,6 +813,7 @@ namespace CelestialBodies.Terrain
         [SerializeField, Range(3, 127)] internal int minResolution;
         [SerializeField, Range(3, 4096)] internal int highResolution;
         [SerializeField, Range(1, 100)] internal int subdivisions;
+        [SerializeField, Range(0, 1)] internal float stepThreshold;
         internal bool UpdateAsync;
         internal int CurrentSurface;
         internal ShapeGenerator ShapeGenerator;
@@ -836,6 +855,7 @@ namespace CelestialBodies.Terrain
             surface.minResolution = 16;
             surface.highResolution = 64;
             surface.subdivisions = 15;
+            surface.stepThreshold = 0.4f;
             //surface.terrainMaterial = TerrainMaterial.Default();
             surface.shape = Shape.Default();
             
@@ -847,6 +867,7 @@ namespace CelestialBodies.Terrain
     {
         internal Vector3[] Vertices;
         internal Vector3[] Normals;
+        internal Color[] VertexColor;
         internal int[] Triangles;
         internal bool IsGeneratingVertex;
         internal bool IsDoneGeneratingVertex;
@@ -862,12 +883,13 @@ namespace CelestialBodies.Terrain
         internal readonly int NumberOfSubdivisions;
         internal readonly int MinResolution;
         internal readonly int HighResolution;
+        internal readonly float StepThreshold;
         internal readonly Vector3 LocalUp;
         internal readonly Vector3 AxisA;
         internal readonly Vector3 AxisB;
         internal TerrainMeshData TerrainMeshData;
 
-        public TerrainFace(ShapeGenerator shapeGenerator, Mesh mesh, int minResolution, int highResolution, int rowID, int lineID, int numberOfSubdivisions, Vector3 localUp)
+        public TerrainFace(ShapeGenerator shapeGenerator, Mesh mesh, int minResolution, int highResolution, int rowID, int lineID, int numberOfSubdivisions, float stepThreshold, Vector3 localUp)
         {
             ShapeGenerator = shapeGenerator;
             Mesh = mesh;
@@ -881,6 +903,7 @@ namespace CelestialBodies.Terrain
             LineID = lineID;
             NumberOfSubdivisions = numberOfSubdivisions;
             TerrainMeshData = new TerrainMeshData();
+            StepThreshold = stepThreshold;
         }
     }
 
@@ -1065,6 +1088,25 @@ namespace CelestialBodies.Terrain
         {
             get => textureNormal;
         }
+
+        [SerializeField] private Color stepColor;
+
+        public Color StepColor
+        {
+            get => stepColor;
+        }
+        
+        [SerializeField] private Texture2D textureStep;
+        public Texture2D TextureStep
+        {
+            get => textureStep;
+        }
+        
+        [SerializeField] private Texture2D textureNormalStep;
+        public Texture2D TextureNormalStep
+        {
+            get => textureNormalStep;
+        }
         
         [SerializeField] private float groundSmooth;
         public float GroundSmooth
@@ -1098,6 +1140,7 @@ namespace CelestialBodies.Terrain
             newTerrain.tint = newTint;
             newTerrain.textureBlend = 0.3f;
             newTerrain.surface = Surface.Default();
+            newTerrain.stepColor = Color.grey;
             return newTerrain;
         }
         
@@ -1134,7 +1177,6 @@ namespace CelestialBodies.Terrain
         internal int TextureResolution;
         internal Texture2D GroundTexture;
         internal float GroundTextureBlend;
-        internal float GroundSmooth;
         internal Texture2D GroundTextureNormals;
 
         public ColorGenerator(TerrainSurface settings)
@@ -1144,7 +1186,6 @@ namespace CelestialBodies.Terrain
             GroundTexture = settings.Texture;
             GroundTextureBlend = settings.TextureBlend;
             GroundTextureNormals = settings.TextureNormal;
-            GroundSmooth = settings.GroundSmooth;
         }
     }
     

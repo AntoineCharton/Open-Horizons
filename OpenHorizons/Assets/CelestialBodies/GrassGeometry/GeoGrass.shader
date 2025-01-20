@@ -9,6 +9,7 @@ Shader "Unlit/GeoGrass" {
 		_RandomWidth ("Random Width", Float) = 0.1
 		_RandomHeight ("Random Height", Float) = 0.1
 		_WindStrength("Wind Strength", Float) = 0.1
+		_GrassSupression ("GrassSupression", Float) = 0.5
 		_TessellationUniform("Tessellation Uniform", Range(1, 64)) = 1
 		// Note, _TessellationUniform can go higher, but the material preview window causes it to be very laggy.
 		// I'd probably just use a manually subdivided plane mesh if higher tessellations are needed.
@@ -17,8 +18,8 @@ Shader "Unlit/GeoGrass" {
 		[Toggle(DISTANCE_DETAIL)] _DistanceDetail ("Toggle Blade Detail based on Camera Distance", Float) = 0
 	}
 	SubShader {
-		Tags { "RenderType"="Transparent" "RenderPipeline" = "UniversalPipeline" "Queue"="Transparent" }
-		Blend SrcAlpha OneMinusSrcAlpha
+		Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" "Queue"="Geometry" }
+		Blend Off
 		LOD 200
 
 		Cull Off
@@ -81,12 +82,7 @@ Shader "Unlit/GeoGrass" {
 				float up = saturate(dot(float3(0,1,0), mainLight.direction) + 0.5);
 
 				float3 shading = NdotL * up * mainLight.shadowAttenuation * mainLight.color + ambient;
-				if(input.uv.y > 0.1)
-					return lerp(_Color, _Color2, input.uv.y) * float4(shading, 1);
-				else
-				{
-					return (0,0,0,0);
-				}
+				return lerp(_Color, _Color2, input.uv.y) * float4(shading, 1);
 			}
 
 			ENDHLSL
