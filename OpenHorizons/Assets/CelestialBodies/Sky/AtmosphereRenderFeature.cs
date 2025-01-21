@@ -118,6 +118,8 @@ namespace CelestialBodies.Sky
 
         void RenderEffects(CommandBuffer cmd, RenderTargetIdentifier colorSource, bool inPrefabMode)
         {
+            if(visibleEffects.effect == null)
+                return;
             BlitUtility.BeginBlitLoop(cmd, colorSource);
 
 #if UNITY_EDITOR

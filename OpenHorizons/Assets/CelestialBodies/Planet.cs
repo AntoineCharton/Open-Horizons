@@ -2,26 +2,27 @@ using CelestialBodies.Clouds.Rendering;
 using CelestialBodies.Terrain;
 using CelestialBodies.Sky;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace CelestialBodies
 {
     [ExecuteAlways]
     public class Planet : MonoBehaviour, IAtmosphereEffect
     {
-        [SerializeField] internal TerrainSurface terrainSurface = TerrainSurface.Default();
-        [SerializeField] internal TerrainDetails terrainDetails = TerrainDetails.Default();
+        [SerializeField] internal Terrain.Terrain terrain = Terrain.Terrain.Default();
+        [SerializeField] internal Trees trees = Trees.Default();
         [SerializeField] internal AtmosphereGenerator sky;
         [SerializeField] private Cloud cloud;
         [SerializeField] private Fog fog = Fog.Default();
         [SerializeField] private Ocean ocean;
-        private MeshDetail _meshDetails;
+        private TerrainGrass _terrainGrasses;
 
         private void Start()
         {
-            _meshDetails = GetComponent<MeshDetail>();
+            _terrainGrasses = GetComponent<TerrainGrass>();
             if (Application.isPlaying)
             {
-                terrainDetails.Initialize();
+                trees.Initialize();
                 fog.Start(gameObject);
             }
         }
@@ -35,7 +36,7 @@ namespace CelestialBodies
         private void OnValidate()
         {
             sky.UpdateAtmosphereEffect(this);
-            terrainSurface.Dirty();
+            terrain.Dirty();
             ocean.Dirty();
             if (Application.isPlaying)
             {
@@ -45,21 +46,21 @@ namespace CelestialBodies
 
         private void Update()
         {
-            VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, terrainSurface.Surface.shape.Radius);
-            terrainSurface.SmartUpdate(transform, ref terrainDetails, _meshDetails);
-            terrainDetails.UpdateDetails(transform);
+            VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, terrain.Surface.shape.Radius);
+            terrain.SmartUpdate(transform, ref trees, _terrainGrasses);
+            trees.UpdateDetails(transform);
             ocean.SmartUpdate(transform);
             if (Application.isPlaying)
             {
-                fog.Update(terrainSurface.Surface.shape.Radius);
-                terrainSurface.SwitchToAsyncUpdate();
+                fog.Update(terrain.Surface.shape.Radius);
+                terrain.SwitchToAsyncUpdate();
             }
         }
 
         private void LateUpdate()
         {
-            sky.SmartUpdate(transform, terrainSurface.Surface.shape.Radius);
-            terrainSurface.UpdateMeshResolution();
+            sky.SmartUpdate(transform, terrain.Surface.shape.Radius);
+            terrain.UpdateMeshResolution();
         }
 
         private void OnDisable()
@@ -71,9 +72,9 @@ namespace CelestialBodies
         {
             if(Application.isPlaying)
                 fog.Destroy();
-            terrainSurface.Cleanup();
-            terrainDetails.CleanUp();
-            terrainSurface.SwitchToParrallelUpdate();
+            terrain.Cleanup();
+            trees.CleanUp();
+            terrain.SwitchToParrallelUpdate();
         }
 
         public void AtmosphereActive(bool isActive)
@@ -86,19 +87,19 @@ namespace CelestialBodies
         public void CloudsActive(bool isActive)
         {
             cloud.Visible = isActive;
-            if (!cloud.Visible && terrainSurface.Surface.highResolution != 256)
+            if (!cloud.Visible && terrain.Surface.highResolution != 256)
             {
-                var newSurface = terrainSurface.Surface;
+                var newSurface = terrain.Surface;
                 newSurface.highResolution = 256;
                 newSurface.highResolution = 256;
                 newSurface.Dirty = true;
-                terrainSurface.SetSurface(newSurface);
+                terrain.SetSurface(newSurface);
             }
         }
 
         public Bounds GetBounds()
         {
-            return terrainSurface.Surface.GetBounds(transform);
+            return terrain.Surface.GetBounds(transform);
         }
 
         public Material GetMaterial(Shader atmosphereShader)
