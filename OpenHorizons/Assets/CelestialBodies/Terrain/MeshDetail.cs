@@ -12,6 +12,7 @@ public class MeshDetail : MonoBehaviour
     [SerializeField] private float MinAltitude;
     [SerializeField] private float MaxAltitude;
     [SerializeField] private GameObject reference;
+    [SerializeField] private MeshCollider _meshCollider;
     private float _minAltitude;
     private float _maxAltitude;
     private float _stepThreshold;
@@ -107,6 +108,7 @@ class DetailMesh
     internal Vector3[] normals;
     internal MeshRenderer _meshRenderer;
     internal MeshFilter _meshFilter;
+    internal MeshCollider _meshCollider;
     private List<(float distance, Vector3 faceCenter, int triangleIndex)> closestTriangles;
 
     private int[] trianglesIndexes;
@@ -116,6 +118,7 @@ class DetailMesh
     private Vector3 targetPosition;
     private bool submitedCalculation;
     private bool finishedCalculation;
+    private bool hasAtLeastOneTriangle;
     private bool runCalculationThread;
     private float _minAltitude;
     private float _maxAltitude;
@@ -143,6 +146,7 @@ class DetailMesh
         _meshRenderer.material = material;
         _meshRenderer.sharedMaterial.SetFloat("_GrassSupression", stepThreshold);;
         _meshFilter = newMesh.AddComponent<MeshFilter>();
+        _meshCollider = newMesh.AddComponent<MeshCollider>();
         this.id = id;
         runCalculationThread = true;
         Thread thread = new Thread(CalculateTriangles);
@@ -287,7 +291,7 @@ class DetailMesh
 
                 // Sort the list by distance
                 closestTriangles.Sort((a, b) => a.distance.CompareTo(b.distance));
-
+                hasAtLeastOneTriangle = false;
                 // Get the top 10 closest triangles
                 int count = Mathf.Min(750, numberOfTrianglesDrawn);
                 if (trianglesIndexes == null || trianglesIndexes.Length != count * 3)
@@ -300,6 +304,7 @@ class DetailMesh
                         trianglesIndexes[(j * 3)] = triangles[triangle.triangleIndex * 3];
                         trianglesIndexes[(j * 3) + 1] = triangles[(triangle.triangleIndex * 3) + 1];
                         trianglesIndexes[(j * 3) + 2] = triangles[(triangle.triangleIndex * 3) + 2];
+                        hasAtLeastOneTriangle = true;
                     }
                     else
                     {
@@ -314,7 +319,6 @@ class DetailMesh
             
             Thread.Sleep(1);
         }
-
         Debug.Log("Finished Calculation thread");
     }
 
@@ -335,10 +339,21 @@ class DetailMesh
     void AssignTriangles()
     {
         var mesh = new Mesh();
-        mesh.vertices = vertices;
-        mesh.colors = vertexColor;
-        mesh.triangles = trianglesIndexes;
-        mesh.RecalculateNormals();
-        _meshFilter.mesh = mesh;
+        if (hasAtLeastOneTriangle)
+        {
+            if (!_meshFilter.gameObject.activeInHierarchy)
+            {
+                _meshFilter.gameObject.SetActive(true);
+            }
+            mesh.vertices = vertices;
+            mesh.colors = vertexColor;
+            mesh.triangles = trianglesIndexes;
+            mesh.RecalculateNormals();
+            _meshFilter.mesh = mesh;
+            _meshCollider.sharedMesh = mesh;
+        } else if (_meshFilter.gameObject.activeInHierarchy)
+        {
+            _meshFilter.gameObject.SetActive(false);
+        }
     }
 }

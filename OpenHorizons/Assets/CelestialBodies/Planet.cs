@@ -9,19 +9,21 @@ namespace CelestialBodies
     public class Planet : MonoBehaviour, IAtmosphereEffect
     {
         [SerializeField] internal TerrainSurface terrainSurface = TerrainSurface.Default();
+        [SerializeField] internal TerrainDetails terrainDetails = TerrainDetails.Default();
         [SerializeField] internal AtmosphereGenerator sky;
         [SerializeField] private Cloud cloud;
         [SerializeField] private Fog fog = Fog.Default();
         [SerializeField] private Ocean ocean;
-        private TerrainDetails _details;
         private MeshDetail _meshDetails;
 
         private void Start()
         {
-            _details = GetComponent<TerrainDetails>();
             _meshDetails = GetComponent<MeshDetail>();
-            if(Application.isPlaying)
+            if (Application.isPlaying)
+            {
+                terrainDetails.Initialize();
                 fog.Start(gameObject);
+            }
         }
 
         private void OnEnable()
@@ -44,7 +46,8 @@ namespace CelestialBodies
         private void Update()
         {
             VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, terrainSurface.Surface.shape.Radius);
-            terrainSurface.SmartUpdate(transform, _details, _meshDetails);
+            terrainSurface.SmartUpdate(transform, ref terrainDetails, _meshDetails);
+            terrainDetails.UpdateDetails(transform);
             ocean.SmartUpdate(transform);
             if (Application.isPlaying)
             {
@@ -69,6 +72,7 @@ namespace CelestialBodies
             if(Application.isPlaying)
                 fog.Destroy();
             terrainSurface.Cleanup();
+            terrainDetails.CleanUp();
             terrainSurface.SwitchToParrallelUpdate();
         }
 

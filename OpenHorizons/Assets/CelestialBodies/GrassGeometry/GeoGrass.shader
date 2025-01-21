@@ -46,6 +46,8 @@ Shader "Unlit/GeoGrass" {
 			#pragma multi_compile _ _MAIN_LIGHT_SHADOWS
 			#pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
 			#pragma multi_compile _ _SHADOWS_SOFT
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
+            #pragma multi_compile_fog
 
 			#pragma shader_feature_local _ DISTANCE_DETAIL
 
@@ -63,11 +65,9 @@ Shader "Unlit/GeoGrass" {
 			#include "Grass.hlsl"
 			#include "Tessellation.hlsl"
 			
-			// Fragment
-
-			float4 frag (GeometryOutput input, bool isFrontFace : SV_IsFrontFace) : SV_Target {
-				input.normalWS = isFrontFace ? input.normalWS : -input.normalWS;
-
+// Fragment
+            float4 frag (GeometryOutput input, bool isFrontFace : SV_IsFrontFace) : SV_Target {
+				input.normalWS = isFrontFace ? input.normalWS : input.normalWS;
 				#if SHADOWS_SCREEN
 					float4 clipPos = TransformWorldToHClip(input.positionWS);
 					float4 shadowCoord = ComputeScreenPos(clipPos);
@@ -82,11 +82,28 @@ Shader "Unlit/GeoGrass" {
 				float up = saturate(dot(float3(0,1,0), mainLight.direction) + 0.5);
 
 				float3 shading = NdotL * up * mainLight.shadowAttenuation * mainLight.color + ambient;
-				return lerp(_Color, _Color2, input.uv.y) * float4(shading, 1);
-			}
 
-			ENDHLSL
-		}
+                // Additional Lights 
+                int additionalLightsCount = GetAdditionalLightsCount();
+                for (int i = 0; i < additionalLightsCount; ++i)
+                {
+                    Light light = GetAdditionalLight(i, input.positionWS);
+                    float3 lightVector = input.positionWS - light.direction; // Vector from light to surface
+                    float distanceSqr = max(dot(lightVector, lightVector), 0.00001);
+                    float3 lightDir = normalize(-lightVector); // Direction from light to surface
+                    float NdotL = saturate(dot(input.normalWS, lightDir)) * 0.05;
+			
+                    // Correct attenuation calculation
+                    float attenuation = 1.0 / (1.0 + light.distanceAttenuation * distanceSqr);
+					attenuation = 1 - attenuation;
+                    // Ensure the light contribution is added correctly
+                    shading += NdotL * light.color * attenuation * light.shadowAttenuation;
+                }
+
+                return lerp(_Color, _Color2, input.uv.y) * float4(shading, 1);
+            }
+            ENDHLSL
+        }
 		
 		// Used for rendering shadowmaps
 		//UsePass "Universal Render Pipeline/Lit/ShadowCaster"

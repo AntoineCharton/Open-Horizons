@@ -7,8 +7,6 @@ namespace CelestialBodies
     [Serializable]
     struct Ocean
     {
-        [SerializeField]
-        internal float radiusOffset;
         [SerializeField] internal Surface surface;
         [SerializeField] 
         internal Material oceanMaterial;

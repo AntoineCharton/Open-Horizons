@@ -146,7 +146,7 @@ namespace CelestialBodies.Terrain
             thread.Start();
         }
 
-        internal static void SmartUpdate(this ref TerrainSurface terrainSurface, Transform transform, TerrainDetails terrainDetails, MeshDetail meshDetail)
+        internal static void SmartUpdate(this ref TerrainSurface terrainSurface, Transform transform, ref TerrainDetails terrainDetails, MeshDetail meshDetail)
         {
             var updatedSurface = terrainSurface.Surface;
             if (terrainSurface.Material.mainTexture == null || updatedSurface.TerrainFaces == null) // When we loose serialization we want to regenerate the texture
@@ -182,7 +182,7 @@ namespace CelestialBodies.Terrain
             {
                 updatedSurface.GenerateMeshLod(updatedSurface.TerrainMeshThreadCalculation);
             }
-            updatedSurface.AssignMesh(terrainDetails, meshDetail);
+            updatedSurface.AssignMesh(ref terrainDetails, meshDetail);
             terrainSurface.SetSurface(updatedSurface);
         }
         
@@ -221,7 +221,9 @@ namespace CelestialBodies.Terrain
             {
                 newSurface.GenerateMeshLod(newSurface.TerrainMeshThreadCalculation);
             }
-            newSurface.AssignMesh();
+
+            var disabledDetails = TerrainDetails.Default();
+            newSurface.AssignMesh(ref disabledDetails);
             oceanFaces.SetSurface(newSurface);
         }
 
@@ -326,7 +328,7 @@ namespace CelestialBodies.Terrain
             return false;
         }
         
-        private static void AssignMesh(this ref Surface surface, TerrainDetails terrainDetails = null, MeshDetail meshDetail = null)
+        private static void AssignMesh(this ref Surface surface, ref TerrainDetails terrainDetails, MeshDetail meshDetail = null)
         {
             for (var i = 0; i < surface.TerrainFaces.Length; i++)
             {
@@ -347,7 +349,7 @@ namespace CelestialBodies.Terrain
                         var meshDetailReady = true;
                         if (surface.TerrainFaces[i].TerrainMeshData.IsHighDefinition && surface.UpdateAsync)
                         {
-                            if (terrainDetails != null)
+                            if (terrainDetails.isEnabled)
                                 terrainDetailReady = terrainDetails.HighDefinition(
                                     surface.TerrainFaces[i].TerrainMeshData.Vertices,
                                     surface.TerrainFaces[i].TerrainMeshData.VertexColor,
@@ -373,7 +375,7 @@ namespace CelestialBodies.Terrain
                         else if(surface.UpdateAsync)
                         {
                             
-                            if (terrainDetails != null)
+                            if (terrainDetails.isEnabled)
                                 terrainDetailReady = terrainDetails.LowDefinition(i);
 
                             
