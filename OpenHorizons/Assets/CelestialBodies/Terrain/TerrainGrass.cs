@@ -3,6 +3,7 @@ using System.Threading;
 using CelestialBodies;
 using CelestialBodies.Terrain;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.Serialization;
 
 public class TerrainGrass : MonoBehaviour
@@ -23,10 +24,13 @@ public class TerrainGrass : MonoBehaviour
 
     void Update()
     {
+        if(Time.frameCount % 2 != 0) // Creates a leak + no need to update every frames will do for now
+            return;
         if (_currentUpdatedMesh > _detailMeshes.Count - 1)
         {
             _currentUpdatedMesh = 0;
         }
+        
         if(_detailMeshes.Count > 0)
         {
             _detailMeshes[_currentUpdatedMesh].UpdateMesh(transform);
@@ -274,7 +278,7 @@ class DetailMesh
                             VertexColor[triangles[j]].b, VertexColor[triangles[j]].a);
                     }
                     
-                    if (distance < 1000 )
+                    if (distance < 400)
                     {
                         numberOfTrianglesDrawn++;
                     } else
@@ -293,8 +297,7 @@ class DetailMesh
                 // Sort the list by distance
                 _closestTriangles.Sort((a, b) => a.distance.CompareTo(b.distance));
                 _hasAtLeastOneTriangle = false;
-                // Get the top 10 closest triangles
-                int count = Mathf.Min(750, numberOfTrianglesDrawn);
+                int count = Mathf.Min(400, numberOfTrianglesDrawn);
                 if (_trianglesIndexes == null || _trianglesIndexes.Length != count * 3)
                     _trianglesIndexes = new int[count * 3];
                 for (int j = 0; j < count; j++)
@@ -318,7 +321,7 @@ class DetailMesh
                 _finishedCalculation = true;
             }
             
-            Thread.Sleep(1);
+            Thread.Sleep(4);
         }
         Debug.Log("Finished Calculation thread");
     }
@@ -350,7 +353,7 @@ class DetailMesh
             mesh.colors = VertexColor;
             mesh.triangles = _trianglesIndexes;
             MeshCollider.sharedMesh = mesh;
-            mesh = SubdivideMesh(Vertices, _trianglesIndexes, VertexColor);
+            mesh = SubdivideMesh(Vertices, _trianglesIndexes, VertexColor, 1f);
             MeshFilter.mesh = mesh;
         } else if (MeshFilter.gameObject.activeInHierarchy)
         {
@@ -358,7 +361,7 @@ class DetailMesh
         }
     }
     
-    Mesh SubdivideMesh(Vector3 [] originalVertices, int [] originalTriangles, Color [] originalColors)
+    Mesh SubdivideMesh(Vector3 [] originalVertices, int [] originalTriangles, Color [] originalColors, float randomise = -1f)
     {
 
         var currentVertexCount = originalVertices.Length;
@@ -382,7 +385,7 @@ class DetailMesh
             hasCorrectLength = true;
             for (var i = 0; i < originalVertices.Length; i++)
             {
-                _newVertices[i] = originalVertices[i];
+                _newVertices[i] =  originalVertices[i];
                 _newColors[i] = originalColors[i];
             }
 
@@ -410,6 +413,16 @@ class DetailMesh
             Vector3 midPointAb = Vector3.Lerp(vertexA, vertexB, 0.5f);
             Vector3 midPointBc = Vector3.Lerp(vertexB, vertexC, 0.5f);
             Vector3 midPointCa = Vector3.Lerp(vertexC, vertexA, 0.5f);
+            
+            if (randomise > 0)
+            {
+                var offset = _noise.Evaluate(midPointAb) * randomise;
+                midPointAb = new Vector3(midPointAb.x + offset, midPointAb.y + offset, midPointAb.z + offset);
+                offset = _noise.Evaluate(midPointBc);
+                midPointBc = new Vector3(midPointBc.x + offset, midPointBc.y + offset, midPointBc.z + offset);
+                offset = _noise.Evaluate(midPointCa);
+                midPointCa = new Vector3(midPointCa.x + offset, midPointCa.y + offset, midPointCa.z + offset);
+            }
 
             // Calculate midpoint colors
             Color colorAb = Color.Lerp(colorA, colorB, 0.5f);

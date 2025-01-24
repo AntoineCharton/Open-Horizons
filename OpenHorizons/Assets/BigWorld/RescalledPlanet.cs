@@ -31,7 +31,7 @@ namespace BigWorld
             }
         }
 
-        private void LateUpdate()
+        private void FixedUpdate()
         {
             if (referenceTransform is null)
             {

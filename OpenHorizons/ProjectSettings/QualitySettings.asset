@@ -74,8 +74,8 @@ QualitySettings:
     skinWeights: 4
     globalTextureMipmapLimit: 0
     textureMipmapLimitSettings: []
-    anisotropicTextures: 2
-    antiAliasing: 2
+    anisotropicTextures: 1
+    antiAliasing: 0
     softParticles: 0
     softVegetation: 1
     realtimeReflectionProbes: 0

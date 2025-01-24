@@ -28,11 +28,11 @@ Material:
     m_Floats:
     - _DistanceDetail: 1
     - _GrassSupression: 0.227
-    - _Height: 1.1
-    - _RandomHeight: -0.52
-    - _RandomWidth: 0.06
+    - _Height: 0.95
+    - _RandomHeight: 0.17
+    - _RandomWidth: 0.04
     - _TessellationUniform: 32
-    - _Width: 0.36
+    - _Width: 0.22
     - _WindStrength: 0.2
     m_Colors:
     - _Color: {r: 0.36194506, g: 0.48427665, b: 0.31523666, a: 1}

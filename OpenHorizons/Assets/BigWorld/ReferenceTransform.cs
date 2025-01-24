@@ -15,7 +15,7 @@ namespace BigWorld
                 referencePosition.Z + localPosition.Z);
         }
 
-        private void Update()
+        private void FixedUpdate()
         {
             localPosition = new DoubleVector3(transform.position);
             if (Vector3.Distance(transform.position, Vector3.zero) > 1000)

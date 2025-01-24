@@ -9,9 +9,10 @@ namespace BigWorld
     {
         public DoubleVector3 position;
         [SerializeField] private ReferenceTransform referenceTransform;
-        private DoubleVector3 _originalOffset;
+        [SerializeField] private Vector3 positionOffset;
         [SerializeField] private MeshRenderer planet;
         [SerializeField] private float rescaleMultiplicator = 11;
+        [SerializeField] private Rigidbody rigidbody;
         private double _size;
         private double _width;
         
@@ -23,7 +24,13 @@ namespace BigWorld
             transform.localScale = currentScale;
         }
 
-        private void LateUpdate()
+        public void AddOffset(Vector3 difference)
+        {
+            position = new DoubleVector3(position.X + difference.x, position.Y + difference.y,position.Z + difference.z);
+            FixedUpdate();
+        }
+
+        private void FixedUpdate()
         {
             if (referenceTransform is null)
             {
@@ -42,9 +49,20 @@ namespace BigWorld
                 if (distance < 150000)
                 {
                     transform.localScale = Vector3.one;
-                    transform.position = new Vector3((float)(position.X - referenceTransform.referencePosition.X),
-                        (float)(position.Y - referenceTransform.referencePosition.Y),
-                        (float)(position.Z - referenceTransform.referencePosition.Z));
+                    if (rigidbody == null)
+                    {
+                        transform.position = new Vector3(
+                            (float)(position.X - referenceTransform.referencePosition.X + positionOffset.x),
+                            (float)(position.Y - referenceTransform.referencePosition.Y + positionOffset.y),
+                            (float)(position.Z - referenceTransform.referencePosition.Z + positionOffset.z));
+                    }
+                    else
+                    {
+                        rigidbody.MovePosition(new Vector3(
+                            (float)(position.X - referenceTransform.referencePosition.X + positionOffset.x),
+                            (float)(position.Y - referenceTransform.referencePosition.Y + positionOffset.y),
+                            (float)(position.Z - referenceTransform.referencePosition.Z + positionOffset.z)));
+                    }
                 }
                 else
                 {
