@@ -71,27 +71,27 @@ namespace BigWorld
                     scale.z = targetSize * scale.z / currentSize;
                     scale.x = targetSize * scale.x / currentSize;
                     scale.y = targetSize * scale.y / currentSize;
-
-                    if (scale.x < 0.5f)
-                    {
-                        planet.AtmosphereActive(false);
-                    }
-                    else
-                    {
-                        planet.AtmosphereActive(true);
-                    }
-
-                    if (scale.x < 0.1f)
-                    {
-                        planet.CloudsActive(false);
-                    }
-                    else
-                    {
-                        planet.CloudsActive(true);
-                    }
-
                     planet.transform.localScale = scale;
                 }
+                
+                if (distance > 100000)
+                {
+                    planet.AtmosphereActive(false);
+                }
+                else
+                {
+                    planet.AtmosphereActive(true);
+                }
+
+                if (distance > 50000)
+                {
+                    planet.CloudsActive(false);
+                }
+                else
+                {
+                    planet.CloudsActive(true);
+                }
+
             }
         }
 

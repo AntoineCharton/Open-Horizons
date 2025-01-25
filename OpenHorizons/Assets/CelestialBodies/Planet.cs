@@ -2,7 +2,6 @@ using CelestialBodies.Clouds.Rendering;
 using CelestialBodies.Terrain;
 using CelestialBodies.Sky;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace CelestialBodies
 {

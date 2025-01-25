@@ -12,6 +12,11 @@ namespace CelestialBodies.Sky
         private static readonly int AtmosphereRadius = Shader.PropertyToID("_AtmosphereRadius");
         private static readonly int PlanetRadius = Shader.PropertyToID("_PlanetRadius");
         private static readonly int OceanRadius = Shader.PropertyToID("_OceanRadius");
+        private static readonly int ZWrite = Shader.PropertyToID("_ZWrite");
+        private static readonly int SrcBlend = Shader.PropertyToID("_SrcBlend");
+        private static readonly int DstBlend = Shader.PropertyToID("_DstBlend");
+        private static readonly int Surface = Shader.PropertyToID("_Surface");
+        private static readonly int BaseColor = Shader.PropertyToID("_BaseColor");
 
         public static bool IsVisible(this AtmosphereGenerator atmosphereGenerator, Plane[] cameraPlanes,
             Transform transform)
@@ -67,34 +72,39 @@ namespace CelestialBodies.Sky
 
         public static MeshRenderer GetLodMesh(this ref AtmosphereGenerator atmosphereGenerator, Transform transform)
         {
+            Transform transform1 = null;
             if (atmosphereGenerator.lodMesh == null)
             {
                 var mesh = GameObject.CreatePrimitive(PrimitiveType.Sphere).GetComponent<MeshRenderer>();
-                mesh.transform.parent = transform;
-                mesh.transform.localPosition = Vector3.zero;
-                mesh.transform.localScale = Vector3.one * ((atmosphereGenerator.AtmosphereSize * 2) + atmosphereGenerator.lodSizeOffset);
+                transform1 = mesh.transform;
+                transform1.parent = transform;
+                transform1.localPosition = Vector3.zero;
+                
                 atmosphereGenerator.lodMesh = mesh;
                 atmosphereGenerator.lodMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-                atmosphereGenerator.lodMaterial.SetColor("_BaseColor", atmosphereGenerator.lodColor);
+                atmosphereGenerator.lodMaterial.SetColor(BaseColor, atmosphereGenerator.lodColor);
                 SetMaterialTransparent(atmosphereGenerator.lodMaterial, true);
                 atmosphereGenerator.lodMesh.material = atmosphereGenerator.lodMaterial;
-                
+            }
+            else
+            {
+                atmosphereGenerator.lodMesh.transform.localScale = Vector3.one * ((atmosphereGenerator.AtmosphereSize * 2) + atmosphereGenerator.lodSizeOffset);
             }
 
             return atmosphereGenerator.lodMesh;
         }
         
-        private const int MATERIAL_OPAQUE = 0;
-        private const int MATERIAL_TRANSPARENT = 1;
+        private const int MaterialOpaque = 0;
+        private const int MaterialTransparent = 1;
 
         private static void SetMaterialTransparent(Material material, bool enabled)
         {
-            material.SetFloat("_Surface", enabled ? MATERIAL_TRANSPARENT : MATERIAL_OPAQUE);
+            material.SetFloat(Surface, enabled ? MaterialTransparent : MaterialOpaque);
             material.SetShaderPassEnabled("SHADOWCASTER", !enabled);
             material.renderQueue = enabled ? 3000 : 2000;
-            material.SetFloat("_DstBlend", enabled ? 10 : 0);
-            material.SetFloat("_SrcBlend", enabled ? 5 : 1);
-            material.SetFloat("_ZWrite", enabled ? 0 : 1);
+            material.SetFloat(DstBlend, enabled ? 10 : 0);
+            material.SetFloat(SrcBlend, enabled ? 5 : 1);
+            material.SetFloat(ZWrite, enabled ? 0 : 1);
         }
 
         public static void CleanUpAtmosphere(this ref AtmosphereGenerator atmosphereGenerator,
@@ -178,7 +188,6 @@ namespace CelestialBodies.Sky
         [SerializeField] internal Transform sun;
         [SerializeField] internal bool directional;
         [SerializeField] internal float radiusOffset;
-        [SerializeField] internal bool lod;
         [SerializeField] internal Color lodColor;
         [SerializeField] internal float lodSizeOffset;
         [SerializeField] internal MeshRenderer lodMesh;
