@@ -27,6 +27,8 @@ namespace CelestialBodies.PhysicsBodies
         [SerializeField] 
         private GravityTarget gravityTarget;
         public GravityTarget GravityTarget => gravityTarget;
+        
+        internal float nextJump;
     }
     
     [Serializable]
@@ -97,17 +99,21 @@ namespace CelestialBodies.PhysicsBodies
                 }
             }
 
-            if (isBackGrounded && (isLeftGrounded || isRightGrounded))
+            if (Time.time > celestialCharacter.nextJump && isBackGrounded && (isLeftGrounded || isRightGrounded))
             {
                 if (forwardSpeed == 0 && numberOfContacts == 4)
                 {
                     rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, Vector3.zero, Time.deltaTime * 10);
                 }
-
-                rb.AddRelativeForce(new Vector3(0, -0.2f, 1) * forwardSpeed, ForceMode.Impulse);
+                
                 if (jump)
                 {
-                    rb.AddRelativeForce(new Vector3(0, 1, 0.1f) * 5, ForceMode.Impulse);
+                    rb.AddRelativeForce(new Vector3(0, 1.5f, 0.5f) * 5, ForceMode.Impulse);
+                    celestialCharacter.nextJump = Time.time + 0.5f;
+                }
+                else
+                {
+                    rb.AddRelativeForce(new Vector3(0, -1000f, 5000) * forwardSpeed * Time.deltaTime, ForceMode.Force);
                 }
             }
 

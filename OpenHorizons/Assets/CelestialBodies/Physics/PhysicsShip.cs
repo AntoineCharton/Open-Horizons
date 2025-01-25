@@ -1,7 +1,5 @@
-using System;
 using BigWorld;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace CelestialBodies.PhysicsBodies
 {
@@ -14,6 +12,8 @@ namespace CelestialBodies.PhysicsBodies
 
         [SerializeField] 
         private Rigidbody rigidbody;
+
+        public Rigidbody Rigidbody => rigidbody;
 
         private bool canFly;
 
@@ -36,6 +36,11 @@ namespace CelestialBodies.PhysicsBodies
         {
             rigidbody.isKinematic = true;
             canFly = false;
+        }
+
+        internal float GetAltitude()
+        {
+            return Vector3.Distance(transform.position, gravityTarget.transform.position);
         }
 
         internal void Roll(float value)
@@ -77,14 +82,28 @@ namespace CelestialBodies.PhysicsBodies
         {
             if(!canFly)
                 return;
+            var maxSpeed = 1000;
+            var acceleration = 10000;
+
+            if (GetAltitude() > 34000)
+            {
+                maxSpeed = 20000;
+                acceleration = 200000;
+            }
+            
+            if(rigidbody.linearVelocity.magnitude > maxSpeed)
+            {
+                rigidbody.linearVelocity *= 0.8f;
+            }
+            
             if(_forward != 0)
-                rigidbody.AddRelativeForce((Vector3.forward * 10000 * _forward) * Time.deltaTime, ForceMode.Acceleration);
+                rigidbody.AddRelativeForce((Vector3.forward * acceleration * _forward) * Time.deltaTime, ForceMode.Acceleration);
             
             if(_vertical != 0)
-                rigidbody.AddRelativeForce((Vector3.up * 1000 * _vertical) * Time.deltaTime, ForceMode.Acceleration);
+                rigidbody.AddRelativeForce((Vector3.up * acceleration * 0.5f * _vertical) * Time.deltaTime, ForceMode.Acceleration);
             
             if(_lateral != 0)
-                rigidbody.AddRelativeForce((Vector3.left * 1000 * _lateral) * Time.deltaTime, ForceMode.Acceleration);
+                rigidbody.AddRelativeForce((Vector3.left * acceleration * _lateral) * Time.deltaTime, ForceMode.Acceleration);
             
             if(_yaw != 0)
                 rigidbody.AddRelativeTorque((Vector3.up * 100 * _yaw) * Time.deltaTime, ForceMode.Acceleration);

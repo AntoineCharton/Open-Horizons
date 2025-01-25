@@ -24,8 +24,6 @@ public class TerrainGrass : MonoBehaviour
 
     void Update()
     {
-        if(Time.frameCount % 2 != 0) // Creates a leak + no need to update every frames will do for now
-            return;
         if (_currentUpdatedMesh > _detailMeshes.Count - 1)
         {
             _currentUpdatedMesh = 0;
@@ -322,7 +320,7 @@ class DetailMesh
                 _finishedCalculation = true;
             }
             
-            Thread.Sleep(4);
+            Thread.Sleep(1);
         }
         Debug.Log("Finished Calculation thread");
     }

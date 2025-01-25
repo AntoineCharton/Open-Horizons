@@ -8,8 +8,8 @@ public class ControlShip : MonoBehaviour
     [SerializeField] private Transform cameraAnchor;
     [SerializeField] private PhysicsShip ship;
     private bool isControlling;
-    [SerializeField] private GameObject speedUI;
-    [SerializeField] private GameObject altitudeUI;
+    [SerializeField] private IntDisplay speedUI;
+    [SerializeField] private IntDisplay altitudeUI;
     private Transform previousTransformParent;
     
     internal bool TakeControl(PhysicsBody controller, Transform camera)
@@ -17,8 +17,8 @@ public class ControlShip : MonoBehaviour
         if(isControlling == true)
             Debug.LogWarning("The ship was controlled");
         ship.StartEngine();
-        speedUI.SetActive(true);
-        altitudeUI.SetActive(true);
+        speedUI.gameObject.SetActive(true);
+        altitudeUI.gameObject.SetActive(true);
         previousTransformParent = camera.transform.parent;
         camera.SetParent(cameraAnchor);
         camera.transform.position = cameraPosition.position;
@@ -32,13 +32,22 @@ public class ControlShip : MonoBehaviour
         if(isControlling == false)
             Debug.LogWarning("The ship wasn't controlled");
         ship.StopEngine();
-        speedUI.SetActive(true);
-        altitudeUI.SetActive(true);
+        speedUI.gameObject.SetActive(false);
+        altitudeUI.gameObject.SetActive(false);
         camera.SetParent(previousTransformParent);
         camera.transform.localPosition = Vector3.zero;
         camera.transform.localRotation = Quaternion.identity;
         isControlling = false;
         return true;
+    }
+
+    private void FixedUpdate()
+    {
+        if (isControlling)
+        {
+            speedUI.SetInt((int)ship.Rigidbody.linearVelocity.magnitude);
+            altitudeUI.SetInt((int)ship.GetAltitude());
+        }
     }
 
     internal void Roll(float value)
