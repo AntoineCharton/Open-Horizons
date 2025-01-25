@@ -132,6 +132,7 @@ class DetailMesh
     private Color[] _newColors;
     private int _currentCount;
     private static readonly int GrassSupression = Shader.PropertyToID("_GrassSupression");
+    private Mesh _mesh;
 
     internal DetailMesh(GameObject parent, int id, Material material, Vector3[] vertices, Color [] vertexColor, int[] indexes,
         float minAltitude, float maxAltitude, float stepThreshold, GameObject reference)
@@ -342,26 +343,31 @@ class DetailMesh
 
     void AssignTriangles()
     {
-        var mesh = new Mesh();
+        if(_mesh == null)
+            _mesh = new Mesh();
+        else
+        {
+            _mesh.Clear();
+        }
         if (_hasAtLeastOneTriangle)
         {
+            _mesh.vertices = Vertices;
+            _mesh.colors = VertexColor;
+            _mesh.triangles = _trianglesIndexes;
+            MeshCollider.sharedMesh = _mesh;
+            _mesh = SubdivideMesh(Vertices, _trianglesIndexes, VertexColor, _mesh,1f);
+            MeshFilter.mesh = _mesh;
             if (!MeshFilter.gameObject.activeInHierarchy)
             {
                 MeshFilter.gameObject.SetActive(true);
             }
-            mesh.vertices = Vertices;
-            mesh.colors = VertexColor;
-            mesh.triangles = _trianglesIndexes;
-            MeshCollider.sharedMesh = mesh;
-            mesh = SubdivideMesh(Vertices, _trianglesIndexes, VertexColor, 1f);
-            MeshFilter.mesh = mesh;
         } else if (MeshFilter.gameObject.activeInHierarchy)
         {
             MeshFilter.gameObject.SetActive(false);
         }
     }
     
-    Mesh SubdivideMesh(Vector3 [] originalVertices, int [] originalTriangles, Color [] originalColors, float randomise = -1f)
+    Mesh SubdivideMesh(Vector3 [] originalVertices, int [] originalTriangles, Color [] originalColors,Mesh mesh, float randomise = -1f)
     {
 
         var currentVertexCount = originalVertices.Length;
@@ -519,8 +525,8 @@ class DetailMesh
 
             currentTriangleCount += 3;
         }
-
-        Mesh newMesh = new Mesh();
+        if(mesh == null)
+            mesh = new Mesh();
 
         if (!hasCorrectLength)
         {
@@ -530,16 +536,16 @@ class DetailMesh
         }
         else 
         {
-            newMesh.vertices = _newVertices;
-            newMesh.triangles = _newTriangles;
-            newMesh.colors = _newColors;
+            mesh.vertices = _newVertices;
+            mesh.triangles = _newTriangles;
+            mesh.colors = _newColors;
         }
 
         // Recalculate normals and other mesh properties
-        newMesh.RecalculateNormals();
-        newMesh.RecalculateTangents();
-        newMesh.RecalculateBounds();
+        mesh.RecalculateNormals();
+        mesh.RecalculateTangents();
+        mesh.RecalculateBounds();
 
-        return newMesh;
+        return mesh;
     }
 }

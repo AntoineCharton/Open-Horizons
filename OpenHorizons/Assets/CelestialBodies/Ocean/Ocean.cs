@@ -16,8 +16,4 @@ namespace CelestialBodies
             this.surface = surface;
         }
     }
-
-    static class OceanBuilder
-    {
-    }
 }
