@@ -96,6 +96,11 @@ namespace CelestialBodies
             }
         }
 
+        public void OceanLOD(bool isLOD)
+        {
+            ocean.SetLOD(isLOD);
+        }
+
         public Bounds GetBounds()
         {
             return terrain.Surface.GetBounds(transform);

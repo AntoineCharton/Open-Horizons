@@ -1569,7 +1569,7 @@
         "m_Id": "1bae39ef99344156b934bbc95b40459f"
     },
     "m_AllowMaterialOverride": false,
-    "m_SurfaceType": 0,
+    "m_SurfaceType": 1,
     "m_ZTestMode": 4,
     "m_ZWriteControl": 2,
     "m_AlphaMode": 0,
@@ -6867,7 +6867,7 @@
     "m_Title": "EDGE FOAM",
     "m_Position": {
         "x": -3340.0,
-        "y": -937.3333740234375
+        "y": -937.333251953125
     }
 }
 
@@ -9666,8 +9666,8 @@
     "m_ObjectId": "e7783fb9c070463bb659514981c3f011",
     "m_Title": "DEPTH",
     "m_Position": {
-        "x": -1677.9998779296875,
-        "y": 160.6666259765625
+        "x": -1678.0,
+        "y": 160.6668701171875
     }
 }
 

@@ -29,7 +29,7 @@ Material:
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 2000
+  m_CustomRenderQueue: 3000
   stringTagMap: {}
   disabledShaderPasses:
   - MOTIONVECTORS
@@ -166,7 +166,7 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - Color_302251bc20874d89a683cf3d1b6fff88: {r: 0, g: 0, b: 0, a: 0}
-    - Color_363c18cd4bab4d08a5a0036e278ceee3: {r: 0.031446517, g: 0.031446517, b: 0.031446517, a: 1}
+    - Color_363c18cd4bab4d08a5a0036e278ceee3: {r: 0.25157225, g: 0.25157225, b: 0.25157225, a: 1}
     - Color_cc93b70e40c54c46881e0228bd6e3623: {r: 0.1341916, g: 0.29223716, b: 0.37106913, a: 1}
     - Color_dce8e05d9129476f989af101532bc4de: {r: 0.3238992, g: 1, b: 0.9853021, a: 1}
     - Vector2_96ef9bdb871b472eaa8998ca2475aa08: {r: 0.05, g: 0.1, b: 0, a: 0}

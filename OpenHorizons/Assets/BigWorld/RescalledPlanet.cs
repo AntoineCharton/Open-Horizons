@@ -31,7 +31,7 @@ namespace BigWorld
             }
         }
 
-        private void FixedUpdate()
+        private void LateUpdate()
         {
             if (referenceTransform is null)
             {
@@ -48,8 +48,6 @@ namespace BigWorld
 
             if (referenceTransform is not null)
             {
-                planet.CloudsActive(true);
-                planet.AtmosphereActive(true);
                 var distance = DoubleVector3.Distance(referenceTransform.UniversePosition, position);
                 if (distance < 150000)
                 {
@@ -83,13 +81,22 @@ namespace BigWorld
                     planet.AtmosphereActive(true);
                 }
 
-                if (distance > 50000)
+                if (distance > 80000)
                 {
                     planet.CloudsActive(false);
                 }
                 else
                 {
                     planet.CloudsActive(true);
+                }
+
+                if (distance > 31800)
+                {
+                    planet.OceanLOD(true);
+                }
+                else
+                {
+                    planet.OceanLOD(false);
                 }
 
             }

@@ -50,9 +50,9 @@ namespace CelestialBodies.Sky
         
         private void CullAndSortEffects(Camera camera)
         {
-            Profiler.BeginSample("Cull atmosphere");
             if(currentActiveEffect == null)
                 return;
+            Profiler.BeginSample("Cull atmosphere");
             if (cameraPlanes == null || cameraPlanes.Length != 6)
             {
                 cameraPlanes = new Plane[6];
@@ -80,9 +80,9 @@ namespace CelestialBodies.Sky
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
-            Profiler.BeginSample("Execute Atmophere Effect");
             if(currentActiveEffect == null)
                 return;
+            Profiler.BeginSample("Execute Atmophere Effect");
             CommandBuffer cmd = CommandBufferPool.Get("Atmosphere Effects");
             cmd.Clear();
 

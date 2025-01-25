@@ -27,10 +27,9 @@ namespace BigWorld
         public void AddOffset(Vector3 difference)
         {
             position = new DoubleVector3(position.X + difference.x, position.Y + difference.y,position.Z + difference.z);
-            FixedUpdate();
         }
 
-        private void FixedUpdate()
+        private void LateUpdate()
         {
             if (referenceTransform is null)
             {
@@ -49,7 +48,7 @@ namespace BigWorld
                 if (distance < 150000)
                 {
                     transform.localScale = Vector3.one;
-                    if (rigidbody == null)
+                    if (rigidbody == null || !Application.isPlaying)
                     {
                         transform.position = new Vector3(
                             (float)(position.X - referenceTransform.referencePosition.X + positionOffset.x),

@@ -93,7 +93,7 @@ namespace CelestialBodies.PhysicsBodies
 
             if (numberOfContacts > 1)
             {
-                if (rb.linearVelocity.magnitude > 10 && forwardSpeed > 0)
+                if (rb.linearVelocity.magnitude > 10 && forwardSpeed > 0 && Time.time > celestialCharacter.nextJump)
                 {
                     rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, transform.forward * 10, Time.deltaTime * 10);
                 }

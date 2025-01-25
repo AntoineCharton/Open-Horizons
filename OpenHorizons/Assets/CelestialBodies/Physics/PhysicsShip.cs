@@ -82,8 +82,8 @@ namespace CelestialBodies.PhysicsBodies
         {
             if(!canFly)
                 return;
-            var maxSpeed = 1000;
-            var acceleration = 10000;
+            var maxSpeed = 750;
+            var acceleration = 7500;
 
             if (GetAltitude() > 34000)
             {
