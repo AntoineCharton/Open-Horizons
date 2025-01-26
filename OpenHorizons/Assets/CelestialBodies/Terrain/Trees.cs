@@ -20,11 +20,59 @@ namespace CelestialBodies
             }
         }
 
+        internal static void GenerateInteractable(this ref Trees trees, Vector3 targetPosition, Transform parent)
+        {
+            if (trees.chunks.Count == 0)
+                return;
+            var closestPositionID = -1;
+            var referenceID = -1;
+            var closestPosition = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+            for (var i = 0; i < trees.chunks.Count; i++)
+            {
+                var referencesIDs = trees.chunks[i].GetReferenceIDs();
+                var positionsIDs = trees.chunks[i].GetPositions();
+
+
+                for (var j = 0; j < referencesIDs.Length; j++)
+                {
+                    if (referencesIDs[j] > -1)
+                    {
+                        var positionToCheck = positionsIDs[j];
+                        if (Vector3.Distance(positionToCheck, targetPosition) < Vector3.Distance(closestPosition, targetPosition))
+                        {
+                            closestPositionID = j;
+                            closestPosition = positionsIDs[j];
+                            referenceID = referencesIDs[j];
+                        }
+                    }
+                }
+            }
+            
+            if (closestPositionID != -1 && referenceID != -1)
+            {
+                var interactableReference = trees.references[referenceID].pool.GetInteractable();
+                if (interactableReference != null)
+                {
+                    PlaceGameObject(interactableReference, parent, closestPosition,
+                        trees.Noise.Evaluate(closestPosition));
+                }
+            }
+        }
+        
+        internal static void PlaceGameObject(GameObject gameObject, Transform parent, Vector3 position, float rotation)
+        {
+            gameObject.transform.parent = parent;
+            gameObject.transform.localPosition = position;
+            gameObject.transform.LookAt(parent.position, Vector3.back);
+            gameObject.transform.Rotate(Vector3.up,  -90, Space.Self);
+            gameObject.transform.Rotate(Vector3.right, rotation * 360, Space.Self);
+        }
         
         internal static void UpdateDetails(this ref Trees trees, Transform transform)
         {
             if (trees.chunks.Count == 0)
                 return;
+            
             var currentPositions = trees.chunks[trees.CurrentChunkEvaluated].GetPositions();
             var currentColor = trees.chunks[trees.CurrentChunkEvaluated].GetVertexColor();
             if (currentPositions.Length == 0)
@@ -109,7 +157,8 @@ namespace CelestialBodies
                     //We offset the noise so the blank spots don't affect the noise
                     if ((trees.Noise.Evaluate(currentPosition + new Vector3(1000,0,0))+ 1) / 2 <= targetValue|| i == trees.references.Count -1)
                     {
-                        var poolID = trees.references[i].pool.Instantiate(trees.references[i].reference, transform,
+                        
+                        var poolID = trees.references[i].pool.Instantiate(trees.references[i].reference, trees.references[i].interactableReference, transform,
                             currentPosition, trees.Noise.Evaluate(currentPosition), trees.CurrentChunkEvaluated, currentID);
                         trees.chunks[trees.CurrentChunkEvaluated].AssignPool(currentID, i, poolID);
                         foundDetail = true;
@@ -210,6 +259,7 @@ namespace CelestialBodies
     class Reference
     {
         [SerializeField] internal GameObject reference;
+        [SerializeField] internal GameObject interactableReference;
         [SerializeField] internal Pool pool;
         [SerializeField] internal float frequence = 0.5f;
     }
@@ -220,6 +270,7 @@ namespace CelestialBodies
         private List<GameObject> _pooledGameObjects;
         private List<PoolTarget> _poolTargets;
         private int _availableGameObjects;
+        private GameObject _interactableReference;
         private int[] _availablePoolIndexes;
         bool _findNewIndexes;
         private bool _runIndexesSearch;
@@ -238,6 +289,11 @@ namespace CelestialBodies
 
             Thread thread = new Thread(FindAvailableIndexes);
             thread.Start();
+        }
+
+        internal GameObject GetInteractable()
+        {
+            return _interactableReference;
         }
 
         internal bool HasFoundAvailableIndexes()
@@ -289,12 +345,18 @@ namespace CelestialBodies
             _runIndexesSearch = false;
         }
 
-        internal int Instantiate(GameObject reference, Transform parent, Vector3 position, float rotation, int chunkID, int id)
+        internal int Instantiate(GameObject reference, GameObject interactableReference, Transform parent, Vector3 position, float rotation, int chunkID, int id)
         {
             if (_pooledGameObjects == null)
             {
                 _pooledGameObjects = new List<GameObject>();
                 _poolTargets = new List<PoolTarget>();
+            }
+            
+            if (interactableReference != null && _interactableReference == null)
+            {
+                Debug.Log("Interactable reference");
+                _interactableReference = GameObject.Instantiate(interactableReference, parent, true);
             }
 
             var targetId = -1;
@@ -315,7 +377,7 @@ namespace CelestialBodies
             if (targetId < 0)
             {
                 newGameObject = GameObject.Instantiate(reference, position, Quaternion.identity);
-                PlaceGameObject(newGameObject);
+                DetailBuilder.PlaceGameObject(newGameObject, parent, position, rotation);
                 _pooledGameObjects.Add(newGameObject);
                 _poolTargets.Add(new PoolTarget(chunkID, id));
                 return _poolTargets.Count - 1;
@@ -324,17 +386,8 @@ namespace CelestialBodies
             _availableGameObjects--;
             newGameObject = _pooledGameObjects[targetId];
             _poolTargets[targetId] = new PoolTarget(chunkID, id);
-            PlaceGameObject(newGameObject);
+            DetailBuilder.PlaceGameObject(newGameObject, parent, position, rotation);
             return targetId;
-
-            void PlaceGameObject(GameObject gameObject)
-            {
-                gameObject.transform.parent = parent;
-                gameObject.transform.localPosition = position;
-                gameObject.transform.LookAt(parent.position, Vector3.back);
-                gameObject.transform.Rotate(Vector3.up,  -90, Space.Self);
-                gameObject.transform.Rotate(Vector3.right, rotation * 360, Space.Self);
-            }
         }
 
         internal bool IsInitialized()
@@ -392,6 +445,7 @@ namespace CelestialBodies
     {
         [SerializeField] private int chunkID;
         private Vector3[] _positions;
+        private float[] _rotations;
         private Color[] _colors;
         private int[] _referenceID;
         private int[] _pooledReferenceID;
@@ -404,6 +458,11 @@ namespace CelestialBodies
         internal Color[] GetVertexColor()
         {
             return _colors;
+        }
+
+        internal int[] GetReferenceIDs()
+        {
+            return _referenceID;
         }
 
         internal bool IsAssigned(int id)

@@ -15,6 +15,7 @@ namespace CelestialBodies
         [SerializeField] private Fog fog = Fog.Default();
         [SerializeField] private Ocean ocean;
         private TerrainGrass _terrainGrasses;
+        private Transform _localPosition;
 
         private void Start()
         {
@@ -23,6 +24,8 @@ namespace CelestialBodies
             {
                 trees.Initialize();
                 fog.Start(gameObject);
+                _localPosition = new GameObject("LocalPosition").transform;
+                _localPosition.transform.parent = transform;
             }
         }
 
@@ -45,12 +48,15 @@ namespace CelestialBodies
 
         private void Update()
         {
+           
             VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, terrain.Surface.shape.Radius);
             terrain.SmartUpdate(transform, ref trees, _terrainGrasses);
             trees.UpdateDetails(transform);
             ocean.SmartUpdate(transform);
             if (Application.isPlaying)
             {
+                _localPosition.position = Camera.main.transform.position;
+                trees.GenerateInteractable(_localPosition.localPosition, transform);
                 fog.Update(terrain.Surface.shape.Radius);
                 terrain.SwitchToAsyncUpdate();
             }
