@@ -742,11 +742,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   position:
-    X: 9973584
-    Y: 1774.6199951171875
-    Z: 17216.23046875
+    X: 9973610
+    Y: 1982.14697265625
+    Z: 16085.578125
   referenceTransform: {fileID: 0}
-  positionOffset: {x: 27.6, y: -4.6, z: -21.93}
+  positionOffset: {x: 0, y: 0, z: 0}
   planet: {fileID: 7946874904111021014}
   rescaleMultiplicator: 90.9
   rigidbody: {fileID: 557324093202161763}
@@ -1096,8 +1096,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.04948388, y: 0.021568518, z: 0.0046060677}
-  m_Center: {x: 0.0002125196, y: -0.0000000052342193, z: -0.018845519}
+  m_Size: {x: 0.04948388, y: 0.021568516, z: 0.02286525}
+  m_Center: {x: 0.00021246735, y: 0.0000000031987146, z: -0.009715888}
 --- !u!4 &5650446682501834062 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -1950733119399844177, guid: 47804206a84443241af551b067baa338, type: 3}
@@ -1132,8 +1132,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.049483884, y: 0.021568524, z: 0.0066783233}
-  m_Center: {x: 0.00021237438, y: 0.00000026173245, z: -0.017809266}
+  m_Size: {x: 0.049483884, y: 0.021568524, z: 0.014292969}
+  m_Center: {x: 0.00021230566, y: 0.00000026949758, z: -0.014001888}
 --- !u!1 &8903943274771035954 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -3380275904009734957, guid: 47804206a84443241af551b067baa338, type: 3}
@@ -1158,5 +1158,5 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.049483884, y: 0.021568524, z: 0.005564319}
-  m_Center: {x: 0.0002122479, y: 0.00000025447918, z: -0.018366313}
+  m_Size: {x: 0.049483884, y: 0.021568524, z: 0.014292969}
+  m_Center: {x: 0.00021230566, y: 0.00000026949758, z: -0.014001888}

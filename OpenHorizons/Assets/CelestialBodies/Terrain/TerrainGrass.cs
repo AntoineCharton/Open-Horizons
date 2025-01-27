@@ -13,6 +13,9 @@ public class TerrainGrass : MonoBehaviour
     [FormerlySerializedAs("MinAltitude")] [SerializeField] private float minAltitude;
     [FormerlySerializedAs("MaxAltitude")] [SerializeField] private float maxAltitude;
     [SerializeField] private GameObject reference;
+    [SerializeField] private GameObject stepReference;
+    [SerializeField] private GameObject bellowAltitudeReference;
+    [SerializeField] private GameObject aboveAltitudeReference;
     private float _minAltitude;
     private float _maxAltitude;
     private int _currentUpdatedMesh;
@@ -79,7 +82,8 @@ public class TerrainGrass : MonoBehaviour
 
         if (!foundDetailMesh)
         {
-            var newDetailMesh = new DetailMesh(gameObject, chunkID, material, vertices, vertexColors, indexes, _minAltitude, _maxAltitude, stepThreshold, reference);
+            var newDetailMesh = new DetailMesh(gameObject, chunkID, material, vertices, vertexColors, indexes, _minAltitude, _maxAltitude, stepThreshold, reference, 
+                stepReference, bellowAltitudeReference, aboveAltitudeReference);
             _detailMeshes.Add(newDetailMesh);
         }
 
@@ -121,7 +125,13 @@ class DetailMesh
     private readonly float _maxAltitude;
     private readonly float _stepThreshold;
     private readonly GameObject _reference;
+    private readonly GameObject _stepReference;
+    private readonly GameObject _bellowMinimumReference;
+    private readonly GameObject _aboveMaximumReference;
     private List<GameObject> _pool;
+    private List<GameObject> _stepPool;
+    private List<GameObject> _bellowMinimumPool;
+    private List<GameObject> _aboveMaximumPool;
     private readonly Noise _noise;
     
     //Mesh Subdivision
@@ -133,7 +143,8 @@ class DetailMesh
     private Mesh _mesh;
 
     internal DetailMesh(GameObject parent, int id, Material material, Vector3[] vertices, Color [] vertexColor, int[] indexes,
-        float minAltitude, float maxAltitude, float stepThreshold, GameObject reference)
+        float minAltitude, float maxAltitude, float stepThreshold, 
+        GameObject reference, GameObject stepReference, GameObject bellowMinimumReference, GameObject aboveMaximumReference)
     {
         _noise = new Noise();
         Vertices = vertices;
@@ -156,6 +167,10 @@ class DetailMesh
         Thread thread = new Thread(CalculateTriangles);
         thread.Start();
         _reference = reference;
+        _stepReference = stepReference;
+        _bellowMinimumReference = bellowMinimumReference;
+        _aboveMaximumReference = aboveMaximumReference;
+
     }
 
     internal void CopyVertexColors(Color [] vertexColorToCopy)
@@ -196,10 +211,34 @@ class DetailMesh
     {
         if (_pool == null)
             _pool = new List<GameObject>();
+
+        if (_stepPool == null)
+            _stepPool = new List<GameObject>();
+
+        if (_bellowMinimumPool == null)
+            _bellowMinimumPool = new List<GameObject>();
+
+        if (_aboveMaximumPool == null)
+            _aboveMaximumPool = new List<GameObject>();
         
         for (var i = 0; i < _pool.Count; i++)
         {
             _pool[i].transform.position = Vector3.one * 10000;
+        }
+        
+        for (var i = 0; i < _stepPool.Count; i++)
+        {
+            _stepPool[i].transform.position = Vector3.one * 10000;
+        }
+
+        for (int i = 0; i < _bellowMinimumPool.Count; i++)
+        {
+            _bellowMinimumPool[i].transform.position = Vector3.one * 10000;
+        }
+        
+        for (int i = 0; i < _aboveMaximumPool.Count; i++)
+        {
+            _aboveMaximumPool[i].transform.position = Vector3.one * 10000;
         }
         
         for (var i = 0; i < _trianglesIndexes.Length; i = i + 3)
@@ -226,7 +265,60 @@ class DetailMesh
                 gameObject.transform.localPosition = position;
                 gameObject.transform.LookAt(parent.position, Vector3.back);
                 gameObject.transform.Rotate(Vector3.up, -90, Space.Self);
-                gameObject.transform.Rotate(Vector3.right, 0, Space.Self);
+                gameObject.transform.Rotate(Vector3.right, _noise.Evaluate(position) * 360, Space.Self);
+            }
+            else if(VertexColor[first].r != 0.99f && VertexColor[first].r != 0.98f && VertexColor[first].r != 0.97f)
+            {
+                if (_stepPool.Count - 1 < i / 3)
+                {
+                    gameObject = Object.Instantiate(_stepReference, position, Quaternion.identity);
+                    _stepPool.Add(gameObject);
+                }
+                else
+                {
+                    gameObject = _stepPool[i / 3];
+                }
+
+                gameObject.transform.parent = parent;
+                gameObject.transform.localPosition = position;
+                gameObject.transform.LookAt(parent.position, Vector3.back);
+                gameObject.transform.Rotate(Vector3.up, -90, Space.Self);
+                gameObject.transform.Rotate(Vector3.right, _noise.Evaluate(position) * 360, Space.Self);
+            }
+            else if(VertexColor[first].r == 0.98f)
+            {
+                if (_bellowMinimumPool.Count - 1 < i / 3)
+                {
+                    gameObject = Object.Instantiate(_bellowMinimumReference, position, Quaternion.identity);
+                    _bellowMinimumPool.Add(gameObject);
+                }
+                else
+                {
+                    gameObject = _bellowMinimumPool[i / 3];
+                }
+
+                gameObject.transform.parent = parent;
+                gameObject.transform.localPosition = position;
+                gameObject.transform.LookAt(parent.position, Vector3.back);
+                gameObject.transform.Rotate(Vector3.up, -90, Space.Self);
+                gameObject.transform.Rotate(Vector3.right, _noise.Evaluate(position) * 360, Space.Self);
+            }else if (VertexColor[first].r == 0.97f)
+            {
+                if (_aboveMaximumPool.Count - 1 < i / 3)
+                {
+                    gameObject = Object.Instantiate(_aboveMaximumReference, position, Quaternion.identity);
+                    _aboveMaximumPool.Add(gameObject);
+                }
+                else
+                {
+                    gameObject = _aboveMaximumPool[i / 3];
+                }
+
+                gameObject.transform.parent = parent;
+                gameObject.transform.localPosition = position;
+                gameObject.transform.LookAt(parent.position, Vector3.back);
+                gameObject.transform.Rotate(Vector3.up, -90, Space.Self);
+                gameObject.transform.Rotate(Vector3.right, _noise.Evaluate(position) * 360, Space.Self);
             }
         }
     }
@@ -273,8 +365,14 @@ class DetailMesh
                     float distance = Vector3.Distance(_targetPosition, faceCenter);
                     if(_minAltitude > Vector3.Distance(Vector3.zero, Vertices[triangles[j]]) || _maxAltitude < Vector3.Distance(Vector3.zero, Vertices[triangles[j]]))
                     {
-                        VertexColor[triangles[j]] = new Color(1, VertexColor[triangles[j]].g,
-                            VertexColor[triangles[j]].b, VertexColor[triangles[j]].a);
+                        if(_minAltitude > Vector3.Distance(Vector3.zero, Vertices[triangles[j]]))
+                            VertexColor[triangles[j]] = new Color(0.98f, VertexColor[triangles[j]].g,
+                                VertexColor[triangles[j]].b, VertexColor[triangles[j]].a);
+                        else
+                        {
+                            VertexColor[triangles[j]] = new Color(0.97f, VertexColor[triangles[j]].g,
+                                VertexColor[triangles[j]].b, VertexColor[triangles[j]].a);
+                        }
                     }
                     
                     if (distance < 400)
