@@ -206,8 +206,8 @@ class DetailMesh
         }
 
     }
-    
-    void AddDetails(Transform parent)
+
+    void InitializeDetailPool()
     {
         if (_pool == null)
             _pool = new List<GameObject>();
@@ -240,6 +240,20 @@ class DetailMesh
         {
             _aboveMaximumPool[i].transform.position = Vector3.one * 10000;
         }
+    }
+
+    void PlaceDetail(GameObject gameObject, Transform parent, Vector3 position)
+    {
+        gameObject.transform.parent = parent;
+        gameObject.transform.localPosition = position;
+        gameObject.transform.LookAt(parent.position, Vector3.back);
+        gameObject.transform.Rotate(Vector3.up, -90, Space.Self);
+        gameObject.transform.Rotate(Vector3.right, _noise.Evaluate(position) * 360, Space.Self);
+    }
+    
+    void AddDetails(Transform parent) // Ugly but works 
+    {
+        InitializeDetailPool();
         
         for (var i = 0; i < _trianglesIndexes.Length; i = i + 3)
         {
@@ -251,74 +265,70 @@ class DetailMesh
             GameObject gameObject;
             if (VertexColor[first].r < _stepThreshold)
             {
-                if (_pool.Count - 1 < i / 3)
+                if (_reference != null)
                 {
-                    gameObject = Object.Instantiate(_reference, position, Quaternion.identity);
-                    _pool.Add(gameObject);
+                    if (_pool.Count - 1 < i / 3)
+                    {
+                        gameObject = Object.Instantiate(_reference, position, Quaternion.identity);
+                        _pool.Add(gameObject);
+                    }
+                    else
+                    {
+                        gameObject = _pool[i / 3];
+                    }
+                    
+                    PlaceDetail(gameObject, parent, position);
                 }
-                else
-                {
-                    gameObject = _pool[i / 3];
-                }
-
-                gameObject.transform.parent = parent;
-                gameObject.transform.localPosition = position;
-                gameObject.transform.LookAt(parent.position, Vector3.back);
-                gameObject.transform.Rotate(Vector3.up, -90, Space.Self);
-                gameObject.transform.Rotate(Vector3.right, _noise.Evaluate(position) * 360, Space.Self);
             }
             else if(VertexColor[first].r != 0.99f && VertexColor[first].r != 0.98f && VertexColor[first].r != 0.97f)
             {
-                if (_stepPool.Count - 1 < i / 3)
+                if (_stepReference != null)
                 {
-                    gameObject = Object.Instantiate(_stepReference, position, Quaternion.identity);
-                    _stepPool.Add(gameObject);
-                }
-                else
-                {
-                    gameObject = _stepPool[i / 3];
-                }
+                    if (_stepPool.Count - 1 < i / 3)
+                    {
+                        gameObject = Object.Instantiate(_stepReference, position, Quaternion.identity);
+                        _stepPool.Add(gameObject);
+                    }
+                    else
+                    {
+                        gameObject = _stepPool[i / 3];
+                    }
 
-                gameObject.transform.parent = parent;
-                gameObject.transform.localPosition = position;
-                gameObject.transform.LookAt(parent.position, Vector3.back);
-                gameObject.transform.Rotate(Vector3.up, -90, Space.Self);
-                gameObject.transform.Rotate(Vector3.right, _noise.Evaluate(position) * 360, Space.Self);
+                    PlaceDetail(gameObject, parent, position);
+                }
             }
             else if(VertexColor[first].r == 0.98f)
             {
-                if (_bellowMinimumPool.Count - 1 < i / 3)
+                if (_bellowMinimumReference != null)
                 {
-                    gameObject = Object.Instantiate(_bellowMinimumReference, position, Quaternion.identity);
-                    _bellowMinimumPool.Add(gameObject);
-                }
-                else
-                {
-                    gameObject = _bellowMinimumPool[i / 3];
-                }
+                    if (_bellowMinimumPool.Count - 1 < i / 3)
+                    {
+                        gameObject = Object.Instantiate(_bellowMinimumReference, position, Quaternion.identity);
+                        _bellowMinimumPool.Add(gameObject);
+                    }
+                    else
+                    {
+                        gameObject = _bellowMinimumPool[i / 3];
+                    }
 
-                gameObject.transform.parent = parent;
-                gameObject.transform.localPosition = position;
-                gameObject.transform.LookAt(parent.position, Vector3.back);
-                gameObject.transform.Rotate(Vector3.up, -90, Space.Self);
-                gameObject.transform.Rotate(Vector3.right, _noise.Evaluate(position) * 360, Space.Self);
+                    PlaceDetail(gameObject, parent, position);
+                }
             }else if (VertexColor[first].r == 0.97f)
             {
-                if (_aboveMaximumPool.Count - 1 < i / 3)
+                if (_aboveMaximumReference != null)
                 {
-                    gameObject = Object.Instantiate(_aboveMaximumReference, position, Quaternion.identity);
-                    _aboveMaximumPool.Add(gameObject);
-                }
-                else
-                {
-                    gameObject = _aboveMaximumPool[i / 3];
-                }
+                    if (_aboveMaximumPool.Count - 1 < i / 3)
+                    {
+                        gameObject = Object.Instantiate(_aboveMaximumReference, position, Quaternion.identity);
+                        _aboveMaximumPool.Add(gameObject);
+                    }
+                    else
+                    {
+                        gameObject = _aboveMaximumPool[i / 3];
+                    }
 
-                gameObject.transform.parent = parent;
-                gameObject.transform.localPosition = position;
-                gameObject.transform.LookAt(parent.position, Vector3.back);
-                gameObject.transform.Rotate(Vector3.up, -90, Space.Self);
-                gameObject.transform.Rotate(Vector3.right, _noise.Evaluate(position) * 360, Space.Self);
+                    PlaceDetail(gameObject, parent, position);
+                }
             }
         }
     }
