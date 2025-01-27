@@ -80,7 +80,7 @@ namespace CelestialBodies.Terrain
             surface.TerrainFaces = null;
         }
 
-        internal static void UpdateMeshResolution(this ref Terrain terrain)
+        internal static void UpdateMeshResolution(this ref Terrain terrain, Vector3 position)
         {
             if(terrain.Surface.AllFacesGenerated == false)
                 return;
@@ -89,7 +89,7 @@ namespace CelestialBodies.Terrain
             var closestDistances = new float[highDefinitionFaces];
             Array.Fill(closestDistances, float.MaxValue);
             Array.Fill(closestFaces, -1);
-            var cameraPosition = Camera.main.transform.position;
+            var cameraPosition = position;
             for (var i = 0; i < terrain.Surface.TerrainFaces.Length; i++)
             {
                 var currentDistance = Vector3.Distance(cameraPosition, terrain.Surface.MeshRenderers[i].bounds.center);

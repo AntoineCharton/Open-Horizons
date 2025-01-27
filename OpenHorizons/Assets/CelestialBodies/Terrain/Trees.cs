@@ -25,8 +25,11 @@ namespace CelestialBodies
             if (trees.chunks.Count == 0)
                 return;
             var closestPositionID = -1;
+            var secondClosestPositionID = -1;
             var referenceID = -1;
             var closestPosition = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+            var secondClosestPosition = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+            var secondReferenceID = -1;
             for (var i = 0; i < trees.chunks.Count; i++)
             {
                 var referencesIDs = trees.chunks[i].GetReferenceIDs();
@@ -38,11 +41,25 @@ namespace CelestialBodies
                     if (referencesIDs[j] > -1)
                     {
                         var positionToCheck = positionsIDs[j];
-                        if (Vector3.Distance(positionToCheck, targetPosition) < Vector3.Distance(closestPosition, targetPosition))
+                        if (Vector3.Distance(positionToCheck, targetPosition) < Vector3.Distance(secondClosestPosition, targetPosition))
                         {
-                            closestPositionID = j;
-                            closestPosition = positionsIDs[j];
-                            referenceID = referencesIDs[j];
+                            if (Vector3.Distance(positionToCheck, targetPosition) <
+                                Vector3.Distance(closestPosition, targetPosition)) // If closer than the first closest we swap
+                            {
+                                secondClosestPositionID = closestPositionID;
+                                secondClosestPosition = closestPosition;
+                                secondReferenceID = referenceID;
+                                closestPositionID = j;
+                                closestPosition = positionsIDs[j];
+                                referenceID = referencesIDs[j];
+                            }
+                            else // Otherwise we just assign
+                            {
+                                secondClosestPositionID = j;
+                                secondClosestPosition = positionsIDs[j];
+                                secondReferenceID = referencesIDs[j];
+                            }
+                            
                         }
                     }
                 }
@@ -50,11 +67,21 @@ namespace CelestialBodies
             
             if (closestPositionID != -1 && referenceID != -1)
             {
-                var interactableReference = trees.references[referenceID].pool.GetInteractable();
+                var interactableReference = trees.references[referenceID].pool.GetFirstInteractable();
                 if (interactableReference != null)
                 {
                     PlaceGameObject(interactableReference, parent, closestPosition,
                         trees.Noise.Evaluate(closestPosition));
+                }
+            }
+            
+            if (secondClosestPositionID != -1 && secondReferenceID != -1)
+            {
+                var interactableReference = trees.references[secondReferenceID].pool.GetSecondInteractable();
+                if (interactableReference != null)
+                {
+                    PlaceGameObject(interactableReference, parent, secondClosestPosition,
+                        trees.Noise.Evaluate(secondClosestPosition));
                 }
             }
         }
@@ -271,6 +298,7 @@ namespace CelestialBodies
         private List<PoolTarget> _poolTargets;
         private int _availableGameObjects;
         private GameObject _interactableReference;
+        private GameObject _secondInteractableReference;
         private int[] _availablePoolIndexes;
         bool _findNewIndexes;
         private bool _runIndexesSearch;
@@ -291,9 +319,14 @@ namespace CelestialBodies
             thread.Start();
         }
 
-        internal GameObject GetInteractable()
+        internal GameObject GetFirstInteractable()
         {
             return _interactableReference;
+        }
+        
+        internal GameObject GetSecondInteractable()
+        {
+            return _secondInteractableReference;
         }
 
         internal bool HasFoundAvailableIndexes()
@@ -357,6 +390,7 @@ namespace CelestialBodies
             {
                 Debug.Log("Interactable reference");
                 _interactableReference = GameObject.Instantiate(interactableReference, parent, true);
+                _secondInteractableReference = GameObject.Instantiate(interactableReference, parent, true);
             }
 
             var targetId = -1;

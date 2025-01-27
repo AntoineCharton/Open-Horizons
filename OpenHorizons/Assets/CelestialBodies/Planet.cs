@@ -14,6 +14,7 @@ namespace CelestialBodies
         [SerializeField] private Cloud cloud;
         [SerializeField] private Fog fog = Fog.Default();
         [SerializeField] private Ocean ocean;
+        [SerializeField] private GameObject target;
         private TerrainGrass _terrainGrasses;
         private Transform _localPosition;
 
@@ -22,6 +23,10 @@ namespace CelestialBodies
             _terrainGrasses = GetComponent<TerrainGrass>();
             if (Application.isPlaying)
             {
+                if (target == null)
+                {
+                    target = Camera.main.transform.gameObject;
+                }
                 trees.Initialize();
                 fog.Start(gameObject);
                 _localPosition = new GameObject("LocalPosition").transform;
@@ -55,7 +60,7 @@ namespace CelestialBodies
             ocean.SmartUpdate(transform);
             if (Application.isPlaying)
             {
-                _localPosition.position = Camera.main.transform.position;
+                _localPosition.position = target.transform.position;
                 trees.GenerateInteractable(_localPosition.localPosition, transform);
                 fog.Update(terrain.Surface.shape.Radius);
                 terrain.SwitchToAsyncUpdate();
@@ -65,7 +70,7 @@ namespace CelestialBodies
         private void LateUpdate()
         {
             sky.SmartUpdate(transform, terrain.Surface.shape.Radius);
-            terrain.UpdateMeshResolution();
+            terrain.UpdateMeshResolution(target.transform.position);
         }
 
         private void OnDisable()
