@@ -85,17 +85,24 @@ namespace CelestialBodies.PhysicsBodies
                 return;
             var maxSpeed = 500;
             var acceleration = 7500;
+            var decelerationFactor = 0.99f;
 
             if (GetAltitude() > 50000)
             {
                 maxSpeed = 20000;
                 acceleration = 200000;
             }
-            else if(GetAltitude() > 35000)
+            else if(GetAltitude() > 37000)
             {
                 maxSpeed = 5000;
                 acceleration = 100000;
-            }else if(GetAltitude() > 32000)
+            }else if (GetAltitude() > 34000)
+            {
+                decelerationFactor = 0.9f;
+                maxSpeed = 2000;
+                acceleration = 10000;
+            }
+            else if(GetAltitude() > 32000)
             {
                 maxSpeed = 1000;
                 acceleration = 7500;
@@ -103,7 +110,7 @@ namespace CelestialBodies.PhysicsBodies
             
             if(shipRigidbody.linearVelocity.magnitude > maxSpeed)
             {
-                shipRigidbody.linearVelocity *= 0.96f;
+                shipRigidbody.linearVelocity *= decelerationFactor;
             }
             
             if(_forward != 0)
