@@ -59,7 +59,6 @@ namespace CelestialBodies
                                 secondClosestPosition = positionsIDs[j];
                                 secondReferenceID = referencesIDs[j];
                             }
-                            
                         }
                     }
                 }
