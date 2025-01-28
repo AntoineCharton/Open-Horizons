@@ -9,7 +9,7 @@ namespace CelestialBodies
 {
     static class DetailBuilder
     {
-        internal const int UpdatePerFrames = 1000;
+        internal const int UpdatePerFrames = 1500;
         internal static void Initialize(this ref Trees trees)
         {
             trees.chunks = new List<Chunk>();
@@ -141,7 +141,7 @@ namespace CelestialBodies
                     }
 
                     iterations++;
-                    if(iterations > 10)
+                    if(iterations > 20)
                         break;
                 }
                 
@@ -172,8 +172,6 @@ namespace CelestialBodies
             }
             if (!trees.chunks[trees.CurrentChunkEvaluated].IsAssigned(currentID) &&
                 !trees.chunks[trees.CurrentChunkEvaluated].IsAvailable() && 
-                trees.MinAlitude < Vector3.Distance(Vector3.zero, currentPosition) &&
-                !(trees.MaxAltitude < Vector3.Distance(Vector3.zero, currentPosition)) &&
                 (trees.Noise.Evaluate(currentPosition) + 1) / 2 < trees.plantsDensity &&
                 vertexColor.r < trees.StepThreshold)
             {
@@ -182,12 +180,19 @@ namespace CelestialBodies
                 {
                     targetValue += (trees.references[i].frequence / sum);
                     //We offset the noise so the blank spots don't affect the noise
-                    if ((trees.Noise.Evaluate(currentPosition + new Vector3(1000,0,0))+ 1) / 2 <= targetValue|| i == trees.references.Count -1)
+                    if ((trees.Noise.Evaluate(currentPosition + new Vector3(1000,0,0))+ 1) / 2 <= targetValue || 
+                        i == trees.references.Count -1)
                     {
-                        
-                        var poolID = trees.references[i].pool.Instantiate(trees.references[i].reference, trees.references[i].interactableReference, transform,
-                            currentPosition, trees.Noise.Evaluate(currentPosition), trees.CurrentChunkEvaluated, currentID);
-                        trees.chunks[trees.CurrentChunkEvaluated].AssignPool(currentID, i, poolID);
+                        if (trees.references[i].MinAlitude < Vector3.Distance(Vector3.zero, currentPosition) &&
+                            !(trees.references[i].MaxAltitude < Vector3.Distance(Vector3.zero, currentPosition)))
+                        {
+                            var poolID = trees.references[i].pool.Instantiate(trees.references[i].reference,
+                                trees.references[i].interactableReference, transform,
+                                currentPosition, trees.Noise.Evaluate(currentPosition), trees.CurrentChunkEvaluated,
+                                currentID);
+                            trees.chunks[trees.CurrentChunkEvaluated].AssignPool(currentID, i, poolID);
+                        }
+
                         foundDetail = true;
                         break;
                     }
@@ -212,9 +217,12 @@ namespace CelestialBodies
         {
             if (trees.AlreadyContainsID(id))
                 return true;
-            
-            trees.MinAlitude = minMax.Min + trees.minAltitudeOffset;
-            trees.MaxAltitude = minMax.Max - trees.maxAltitudeOffset;
+
+            for (var i = 0; i < trees.references.Count; i++)
+            {
+                trees.references[i].MinAlitude = minMax.Min + trees.references[i].minAltitudeOffset;
+                trees.references[i].MaxAltitude = minMax.Max - trees.references[i].maxAltitudeOffset;
+            }
             trees.StepThreshold = stepThreshold;
             var foundChunk = false;
             for (int i = 0; i < trees.chunks.Count; i++)
@@ -266,11 +274,9 @@ namespace CelestialBodies
         internal int CurrentChunkEvaluated;
         [SerializeField] internal List<Reference> references;
         [SerializeField, HideInInspector] internal List<Chunk> chunks;
-        [SerializeField] internal float minAltitudeOffset;
-        [SerializeField] internal float maxAltitudeOffset;
         [SerializeField] internal float plantsDensity;
-        internal float MinAlitude;
-        internal float MaxAltitude;
+        //internal float MinAlitude;
+        //internal float MaxAltitude;
         internal float StepThreshold;
 
         public static Trees Default()
@@ -289,6 +295,10 @@ namespace CelestialBodies
         [SerializeField] internal GameObject interactableReference;
         [SerializeField] internal Pool pool;
         [SerializeField] internal float frequence = 0.5f;
+        [SerializeField] internal float minAltitudeOffset;
+        [SerializeField] internal float maxAltitudeOffset;
+        [SerializeField] internal float MinAlitude;
+        [SerializeField] internal float MaxAltitude;
     }
 
     [Serializable]

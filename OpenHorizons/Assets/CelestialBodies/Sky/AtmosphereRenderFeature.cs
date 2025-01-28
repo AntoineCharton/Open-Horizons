@@ -9,6 +9,7 @@ using UnityEngine.Profiling;
 using UnityEditor.SceneManagement;
 #endif
 
+#pragma warning disable CS0672
 namespace CelestialBodies.Sky
 {
     public class AtmosphereRenderPass : ScriptableRenderPass
@@ -98,10 +99,12 @@ namespace CelestialBodies.Sky
 
             bool prefabMode = PrefabStageUtility.GetCurrentPrefabStage() == StageUtility.GetCurrentStage();
 
+#pragma warning disable CS0618
             if (cameraData.postProcessEnabled)
             {
                 RenderEffects(cmd, renderingData.cameraData.renderer.cameraColorTargetHandle, prefabMode);
             }
+#pragma warning restore CS0618
 #else
         if (cameraData.postProcessEnabled) 
         {
@@ -338,7 +341,7 @@ namespace CelestialBodies.Sky
         }
     }
 }
-
+#pragma warning restore CS0672
 //MIT License
 //Copyright (c) 2023 Kai Angulo
 //Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:

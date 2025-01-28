@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
+#pragma warning disable CS0672 
 namespace CelestialBodies
 {
     public sealed class VolumetricFogPass : CustomRenderPass
@@ -164,3 +165,4 @@ namespace CelestialBodies
         }
     }
 }
+#pragma warning restore CS0672

@@ -449,8 +449,11 @@ class DetailMesh
 
     void AssignTriangles()
     {
-        if(_mesh == null)
+        if (_mesh == null)
+        {
             _mesh = new Mesh();
+            _mesh.indexFormat = IndexFormat.UInt32;
+        }
         else
         {
             _mesh.Clear();
@@ -631,8 +634,12 @@ class DetailMesh
 
             currentTriangleCount += 3;
         }
-        if(mesh == null)
+
+        if (mesh == null)
+        {
             mesh = new Mesh();
+            mesh.indexFormat = IndexFormat.UInt32;
+        }
 
         if (!hasCorrectLength)
         {

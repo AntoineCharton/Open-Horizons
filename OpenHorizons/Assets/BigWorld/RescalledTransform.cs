@@ -1,6 +1,7 @@
 using System;
 using BigWorld.Doubles;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace BigWorld
 {
@@ -12,7 +13,7 @@ namespace BigWorld
         [SerializeField] private Vector3 positionOffset;
         [SerializeField] private MeshRenderer planet;
         [SerializeField] private float rescaleMultiplicator = 11;
-        [SerializeField] private Rigidbody rigidbody;
+        [FormerlySerializedAs("rigidbody")] [SerializeField] private Rigidbody rigidbodyTarget;
         private double _size;
         private double _width;
         
@@ -48,7 +49,7 @@ namespace BigWorld
                 if (distance < 150000)
                 {
                     transform.localScale = Vector3.one;
-                    if (rigidbody == null || !Application.isPlaying)
+                    if (rigidbodyTarget == null || !Application.isPlaying)
                     {
                         transform.position = new Vector3(
                             (float)(position.X - referenceTransform.referencePosition.X + positionOffset.x),
@@ -57,7 +58,7 @@ namespace BigWorld
                     }
                     else
                     {
-                        rigidbody.MovePosition(new Vector3(
+                        rigidbodyTarget.MovePosition(new Vector3(
                             (float)(position.X - referenceTransform.referencePosition.X + positionOffset.x),
                             (float)(position.Y - referenceTransform.referencePosition.Y + positionOffset.y),
                             (float)(position.Z - referenceTransform.referencePosition.Z + positionOffset.z)));
@@ -67,16 +68,17 @@ namespace BigWorld
                 {
                     var localPosition = DoubleVector3.InverseTransformPoint(referenceTransform.UniversePosition,
                         Quaternion.identity, new DoubleVector3(1, 1, 1), position);
-                    transform.position =
+                    var transformToUpdate = transform;
+                    transformToUpdate.position =
                         (new Vector3((float)localPosition.X, (float)localPosition.Y, (float)localPosition.Z)
                             .normalized * 148500) + referenceTransform.transform.position;
                     float targetSize = (float)_size * rescaleMultiplicator;
                     float currentSize = planet.bounds.size.z;
-                    Vector3 scale = transform.localScale;
+                    Vector3 scale = transformToUpdate.localScale;
                     scale.z = targetSize * scale.z / currentSize;
                     scale.x = targetSize * scale.x / currentSize;
                     scale.y = targetSize * scale.y / currentSize;
-                    transform.localScale = scale;
+                    transformToUpdate.localScale = scale;
                 }
             }
         }

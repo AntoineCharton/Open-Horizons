@@ -16,7 +16,7 @@ namespace CelestialBodies.PhysicsBodies
         private ControlShip _physicsShip;
         [SerializeField] private GameObject interactionAvailable;
         private bool isControllingOther;
-        [SerializeField] private Transform camera;
+        [FormerlySerializedAs("camera")] [SerializeField] private Transform target;
         [SerializeField] private Vector3 offsetFromParent;
         [SerializeField] private bool jump;
         [SerializeField] private bool wasJumpTriggered;
@@ -70,7 +70,7 @@ namespace CelestialBodies.PhysicsBodies
                 {
                     if (Input.GetKeyDown(KeyCode.F))
                     {
-                        if (_physicsShip.TakeControl(this, camera))
+                        if (_physicsShip.TakeControl(this, target))
                         {
                             previousLayer = gameObject.layer;
                             isControllingOther = true;
@@ -85,7 +85,7 @@ namespace CelestialBodies.PhysicsBodies
             {
                 if (Input.GetKeyDown(KeyCode.F))
                 {
-                    _physicsShip.ReleaseControl(camera);
+                    _physicsShip.ReleaseControl(target);
                     interactionAvailable.SetActive(true);
                     isControllingOther = false;
                     gameObject.layer = previousLayer;

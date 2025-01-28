@@ -3,6 +3,7 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using CelestialBodies;
 
+#pragma warning disable CS0618
 namespace CelestialBodies
 {
     public abstract class CustomRenderPass : ScriptableRenderPass
@@ -12,22 +13,6 @@ namespace CelestialBodies
             Triangle = 0,
             Quad = 1
         };
-
-        /// <summary>
-        /// Before URP 14 there were two things that are no longer true:
-        /// 
-        /// <list type="number">
-        ///     <item>Calling <see cref="ScriptableRenderPass.Blit(CommandBuffer, RTHandle, RTHandle, Material, int)"/> without a material would simply do a copy with some internal material.</item>
-        ///     <item>Calling Blit would also automatically set the "source" texture as "_MainTex"</item>
-        /// </list>
-        /// 
-        /// Since neither of these is true anymore (?), we now need this utility material which does it for us.
-        /// You will need to set the <c>_MainTex</c> (<see cref="ShaderIds.MainTex"/>) value of this material to setup the texture to copy over.<para/>
-        /// 
-        /// Note that since the <see cref="CommandBuffer"/> operates async, and the call to <see cref="Material.SetTexture"/> is not, then you will only be
-        /// able to safely use this once per pass/execute. Unless of course you instantiate more of them.
-        /// </summary>
-        protected Material BlitCopyMaterial;
 
         /// <summary>
         /// Similar to <see cref="BlitCopyMaterial"/> but performs a blend instead of a straight copy.
@@ -66,7 +51,6 @@ namespace CelestialBodies
 
         public CustomRenderPass()
         {
-            BlitCopyMaterial = CoreUtils.CreateEngineMaterial("VertexFragment/BlitCopy");
             BlitBlendMaterial = CoreUtils.CreateEngineMaterial("VertexFragment/BlitBlend");
             BlitDepthCopyMaterial = CoreUtils.CreateEngineMaterial("VertexFragment/BlitDepthCopy");
             BlitTransparencyDepthCopyMaterial = CoreUtils.CreateEngineMaterial("VertexFragment/BlitTransparencyDepthCopy");
@@ -109,18 +93,6 @@ namespace CelestialBodies
             }
 
             return false;
-        }
-
-        /// <summary>
-        /// Copies the provided texture onto the camera color buffer using the <see cref="BlitCopyMaterial"/>.
-        /// </summary>
-        /// <param name="commandBuffer"></param>
-        /// <param name="sourceHandle"></param>
-        /// <param name="renderingData"></param>
-        protected void BlitCopyOntoCamera(CommandBuffer commandBuffer, RTHandle sourceHandle, ref RenderingData renderingData)
-        {
-            BlitCopyMaterial.SetTexture(ShaderIds.BlitTexture, sourceHandle, RenderTextureSubElement.Color);
-            Blit(commandBuffer, sourceHandle, renderingData.cameraData.renderer.cameraColorTargetHandle, BlitCopyMaterial);
         }
 
         /// <summary>
@@ -253,3 +225,4 @@ namespace CelestialBodies
         }
     }
 }
+#pragma warning restore CS0672

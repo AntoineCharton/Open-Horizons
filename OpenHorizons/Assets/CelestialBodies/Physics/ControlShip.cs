@@ -45,7 +45,7 @@ public class ControlShip : MonoBehaviour
     {
         if (isControlling)
         {
-            speedUI.SetInt((int)ship.Rigidbody.linearVelocity.magnitude);
+            speedUI.SetInt((int)ship.ShipRigidbody.linearVelocity.magnitude);
             altitudeUI.SetInt((int)ship.GetAltitude());
         }
     }

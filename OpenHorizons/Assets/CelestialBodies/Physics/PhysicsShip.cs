@@ -1,5 +1,6 @@
 using BigWorld;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace CelestialBodies.PhysicsBodies
 {
@@ -10,10 +11,10 @@ namespace CelestialBodies.PhysicsBodies
         [SerializeField]
         private Transform artificialGravityTarget;
 
-        [SerializeField] 
-        private Rigidbody rigidbody;
+        [FormerlySerializedAs("rigidbody")] [SerializeField] 
+        private Rigidbody shipRigidbody;
 
-        public Rigidbody Rigidbody => rigidbody;
+        public Rigidbody ShipRigidbody => shipRigidbody;
 
         private bool canFly;
 
@@ -28,13 +29,13 @@ namespace CelestialBodies.PhysicsBodies
 
         internal void StartEngine()
         {
-            rigidbody.isKinematic = false;
+            shipRigidbody.isKinematic = false;
             canFly = false;
         }
         
         internal void StopEngine()
         {
-            rigidbody.isKinematic = true;
+            shipRigidbody.isKinematic = true;
             canFly = false;
         }
 
@@ -61,7 +62,7 @@ namespace CelestialBodies.PhysicsBodies
 
         internal void VerticalThrust(float value)
         {
-            if(rigidbody.isKinematic)
+            if(shipRigidbody.isKinematic)
                 return;
             _vertical = value;
             canFly = true;
@@ -91,43 +92,43 @@ namespace CelestialBodies.PhysicsBodies
                 acceleration = 200000;
             }
             
-            if(rigidbody.linearVelocity.magnitude > maxSpeed)
+            if(shipRigidbody.linearVelocity.magnitude > maxSpeed)
             {
-                rigidbody.linearVelocity *= 0.8f;
+                shipRigidbody.linearVelocity *= 0.8f;
             }
             
             if(_forward != 0)
-                rigidbody.AddRelativeForce((Vector3.forward * acceleration * _forward) * Time.deltaTime, ForceMode.Acceleration);
+                shipRigidbody.AddRelativeForce((Vector3.forward * acceleration * _forward) * Time.deltaTime, ForceMode.Acceleration);
             
             if(_vertical != 0)
-                rigidbody.AddRelativeForce((Vector3.up * acceleration * 0.5f * _vertical) * Time.deltaTime, ForceMode.Acceleration);
+                shipRigidbody.AddRelativeForce((Vector3.up * acceleration * 0.5f * _vertical) * Time.deltaTime, ForceMode.Acceleration);
             
             if(_lateral != 0)
-                rigidbody.AddRelativeForce((Vector3.left * acceleration * _lateral) * Time.deltaTime, ForceMode.Acceleration);
+                shipRigidbody.AddRelativeForce((Vector3.left * acceleration * _lateral) * Time.deltaTime, ForceMode.Acceleration);
             
             if(_yaw != 0)
-                rigidbody.AddRelativeTorque((Vector3.up * 100 * _yaw) * Time.deltaTime, ForceMode.Acceleration);
+                shipRigidbody.AddRelativeTorque((Vector3.up * 100 * _yaw) * Time.deltaTime, ForceMode.Acceleration);
             
             if(_pitch != 0)
-                rigidbody.AddRelativeTorque((Vector3.left * 100 * _pitch) * Time.deltaTime, ForceMode.Acceleration);
+                shipRigidbody.AddRelativeTorque((Vector3.left * 100 * _pitch) * Time.deltaTime, ForceMode.Acceleration);
             
             if(_roll != 0)
-                rigidbody.AddRelativeTorque((Vector3.forward * 100 * _roll) * Time.deltaTime, ForceMode.Acceleration);
+                shipRigidbody.AddRelativeTorque((Vector3.forward * 100 * _roll) * Time.deltaTime, ForceMode.Acceleration);
             
-            if (!rigidbody.isKinematic && !canFly)
+            if (!shipRigidbody.isKinematic && !canFly)
             {
-                rigidbody.linearVelocity = Vector3.zero;
-                rigidbody.angularVelocity = Vector3.zero;
+                shipRigidbody.linearVelocity = Vector3.zero;
+                shipRigidbody.angularVelocity = Vector3.zero;
             }
-            else if(rigidbody.linearVelocity.magnitude > 20)
+            else if(shipRigidbody.linearVelocity.magnitude > 20)
             {
-                rigidbody.angularVelocity = Vector3.Lerp(rigidbody.angularVelocity, Vector3.zero, Time.deltaTime * 1.5f);
-                Vector3 forwardVelocity = transform.forward * rigidbody.linearVelocity.magnitude;
-                rigidbody.linearVelocity = Vector3.Lerp(rigidbody.linearVelocity, forwardVelocity, Time.deltaTime);
+                shipRigidbody.angularVelocity = Vector3.Lerp(shipRigidbody.angularVelocity, Vector3.zero, Time.deltaTime * 1.5f);
+                Vector3 forwardVelocity = transform.forward * shipRigidbody.linearVelocity.magnitude;
+                shipRigidbody.linearVelocity = Vector3.Lerp(shipRigidbody.linearVelocity, forwardVelocity, Time.deltaTime);
             } 
             
             
-            rescalledTransform.AddOffset(rigidbody.linearVelocity * Time.deltaTime);
+            rescalledTransform.AddOffset(shipRigidbody.linearVelocity * Time.deltaTime);
         }
 
         private void OnTriggerEnter(Collider other)
