@@ -71,7 +71,7 @@ namespace CelestialBodies.PhysicsBodies
             celestialInputs.TargetYRotation.Rotate(new Vector3(0, celestialInputs.YAxisRotation, 0));
         }
 
-        internal static void UpdateGravity(this CelestialCharacter celestialCharacter, float forwardSpeed, bool jump)
+        internal static void UpdateGravity(this ref CelestialCharacter celestialCharacter, float forwardSpeed, bool jump)
         {
             var rb = celestialCharacter.Rigidbody;
             var transform = celestialCharacter.Rigidbody.transform;
@@ -99,19 +99,24 @@ namespace CelestialBodies.PhysicsBodies
                 }
             }
 
+            if (numberOfContacts > 0)
+            {
+                if (jump && Time.time > celestialCharacter.nextJump)
+                {
+                    rb.AddRelativeForce(new Vector3(0, 1.5f, 0) * 5, ForceMode.Impulse);
+                    celestialCharacter.nextJump = Time.time + 0.5f;
+                }
+            }
+
             if (Time.time > celestialCharacter.nextJump && isBackGrounded && (isLeftGrounded || isRightGrounded))
             {
-                if (forwardSpeed == 0 && numberOfContacts == 4)
+                if (forwardSpeed == 0 && numberOfContacts == 4 && !jump)
                 {
                     rb.linearVelocity = Vector3.Lerp(rb.linearVelocity, Vector3.zero, Time.deltaTime * 10);
                 }
                 
-                if (jump)
-                {
-                    rb.AddRelativeForce(new Vector3(0, 1.5f, 0.5f) * 5, ForceMode.Impulse);
-                    celestialCharacter.nextJump = Time.time + 0.5f;
-                }
-                else
+
+                if(!jump)
                 {
                     rb.AddRelativeForce(new Vector3(0, -1000f, 5000) * forwardSpeed * Time.deltaTime, ForceMode.Force);
                 }
