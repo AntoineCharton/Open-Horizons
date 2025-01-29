@@ -1,0 +1,16 @@
+{
+    "name": "com.antoine.kepler",
+    "rootNamespace": "",
+    "references": [
+        "GUID:5cdd24865b3d2b544a19e155120cfcc6"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
