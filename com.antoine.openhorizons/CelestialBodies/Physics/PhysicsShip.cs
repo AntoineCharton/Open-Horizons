@@ -89,12 +89,12 @@ namespace CelestialBodies.PhysicsBodies
             if(!canFly)
                 return;
             var maxSpeed = 500;
-            var acceleration = 7500;
+            var acceleration = 10000;
             var decelerationFactor = 0.8f;
 
             if (GetAltitude() > 50000)
             {
-                maxSpeed = 20000;
+                maxSpeed = 8000;
                 acceleration = 200000;
             }
             else if(GetAltitude() > 37000)
@@ -105,12 +105,12 @@ namespace CelestialBodies.PhysicsBodies
             {
                 decelerationFactor = 0.9f;
                 maxSpeed = 2000;
-                acceleration = 10000;
+                acceleration = 15000;
             }
             else if(GetAltitude() > 32000)
             {
                 maxSpeed = 1000;
-                acceleration = 7500;
+                acceleration = 12000;
             }
             
             if(shipRigidbody.linearVelocity.magnitude > maxSpeed)
