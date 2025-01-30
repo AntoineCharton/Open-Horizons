@@ -97,14 +97,6 @@ namespace CelestialBodies
         public void CloudsActive(bool isActive)
         {
             cloud.Visible = isActive;
-            if (!cloud.Visible && terrain.Surface.highResolution != 256)
-            {
-                var newSurface = terrain.Surface;
-                newSurface.highResolution = 256;
-                newSurface.highResolution = 256;
-                newSurface.Dirty = true;
-                terrain.SetSurface(newSurface);
-            }
         }
 
         public void OceanLOD(bool isLOD)

@@ -6,10 +6,10 @@ namespace CelestialBodies.PhysicsBodies
 {
     public class PhysicsShip : MonoBehaviour
     {
-        [SerializeField] private Transform gravityTarget;
+        [SerializeField] private GravityTarget gravityTarget;
         
         [SerializeField]
-        private Transform artificialGravityTarget;
+        private GravityTarget artificialGravityTarget;
 
         [FormerlySerializedAs("rigidbody")] [SerializeField] 
         private Rigidbody shipRigidbody;
@@ -42,6 +42,11 @@ namespace CelestialBodies.PhysicsBodies
         internal float GetAltitude()
         {
             return Vector3.Distance(transform.position, gravityTarget.transform.position);
+        }
+
+        public void SetGravityTarget(GravityTarget gravityTarget)
+        {
+            this.gravityTarget = gravityTarget;
         }
 
         internal void Roll(float value)
@@ -85,7 +90,7 @@ namespace CelestialBodies.PhysicsBodies
                 return;
             var maxSpeed = 500;
             var acceleration = 7500;
-            var decelerationFactor = 0.99f;
+            var decelerationFactor = 0.8f;
 
             if (GetAltitude() > 50000)
             {

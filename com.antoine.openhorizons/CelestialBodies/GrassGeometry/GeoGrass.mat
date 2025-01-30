@@ -32,7 +32,7 @@ Material:
     - _RandomHeight: 0.17
     - _RandomWidth: 0.04
     - _TessellationUniform: 32
-    - _Width: 0.22
+    - _Width: 0.25
     - _WindStrength: 0.2
     m_Colors:
     - _Color: {r: 0.18823531, g: 0.3019608, b: 0.17254902, a: 1}

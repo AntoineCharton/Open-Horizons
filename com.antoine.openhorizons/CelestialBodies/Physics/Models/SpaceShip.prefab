@@ -51,8 +51,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 2.7241483, y: 0.8106598, z: 4.0361342}
-  m_Center: {x: -0.036166437, y: -0.095002346, z: 0.000000009369139}
+  m_Size: {x: 3.3045971, y: 1.5862173, z: 4.0361342}
+  m_Center: {x: 0.25405878, y: -0.48278636, z: 0.000000017269128}
 --- !u!1 &1425098110094976093
 GameObject:
   m_ObjectHideFlags: 0
@@ -104,8 +104,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.2248747, y: 0.54265726, z: 6.154744}
-  m_Center: {x: 0.21419649, y: 0.039007995, z: 0.3689639}
+  m_Size: {x: 3.2248747, y: 1.6311735, z: 6.154744}
+  m_Center: {x: 0.2141964, y: 0.34181926, z: 0.36896402}
 --- !u!1 &2274872801634424205
 GameObject:
   m_ObjectHideFlags: 0
@@ -183,13 +183,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2803136822346341397}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.20206569, y: -0.6776204, z: 0.20206569, w: 0.67762053}
-  m_LocalPosition: {x: 26.62, y: 30.11, z: 0}
-  m_LocalScale: {x: 1, y: 1.0000002, z: 1.0000001}
+  m_LocalRotation: {x: -0.17226179, y: 0.6858031, z: -0.17226179, w: -0.6858031}
+  m_LocalPosition: {x: 26.620014, y: 25.18, z: 0.000017166138}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 4567558361271165408}
-  m_LocalEulerAnglesHint: {x: -85.46, y: 107.7, z: 5.6170044}
+  m_LocalEulerAnglesHint: {x: 28.2, y: 270, z: 0}
 --- !u!1 &3897815869480262564
 GameObject:
   m_ObjectHideFlags: 0
@@ -274,10 +274,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 1.57
-  m_Height: 15.26
+  m_Radius: 2.171254
+  m_Height: 19.22433
   m_Direction: 1
-  m_Center: {x: -1.52, y: -3.18, z: -8.29}
+  m_Center: {x: -1.5199995, y: -1.1978335, z: -8.891254}
 --- !u!136 &2122146247920296755
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -297,10 +297,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 1.57
-  m_Height: 15.26
+  m_Radius: 2.171254
+  m_Height: 19.22433
   m_Direction: 1
-  m_Center: {x: -1.52, y: -3.18, z: 8.29}
+  m_Center: {x: -1.5199995, y: -1.1978335, z: 8.891254}
 --- !u!1 &4444605164974181991
 GameObject:
   m_ObjectHideFlags: 0
@@ -310,6 +310,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8916006335611056639}
+  - component: {fileID: 3146635751101177725}
   m_Layer: 0
   m_Name: GravityTarget
   m_TagString: Untagged
@@ -325,13 +326,26 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4444605164974181991}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: -1000, z: -0}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0, y: -1000, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 3951004375937485492}
-  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3146635751101177725
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4444605164974181991}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c31a8b74f9214841a67895a78bb49df, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  gravity: -9.81
 --- !u!1 &4457746984407239267
 GameObject:
   m_ObjectHideFlags: 0
@@ -383,8 +397,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 5.8857894, y: 0.81065977, z: 4.0361342}
-  m_Center: {x: 0.2628194, y: -0.09500174, z: 0.0000000040874664}
+  m_Size: {x: 5.8857894, y: 0.94975644, z: 4.0361342}
+  m_Center: {x: 0.2628195, y: -0.16455008, z: 4.977168e-15}
 --- !u!1 &5872010521505429832
 GameObject:
   m_ObjectHideFlags: 0
@@ -441,8 +455,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 21.745869, y: 0.86740375, z: 4.813746}
-  m_Center: {x: 3.1457403, y: -0.066266954, z: -0.20294374}
+  m_Size: {x: 22.325653, y: 0.86740375, z: 4.813746}
+  m_Center: {x: 3.435633, y: -0.066266954, z: -0.20294376}
 --- !u!65 &8993338557052368666
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -699,8 +713,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   gravityTarget: {fileID: 0}
-  artificialGravityTarget: {fileID: 8916006335611056639}
-  rigidbody: {fileID: 557324093202161763}
+  artificialGravityTarget: {fileID: 3146635751101177725}
+  shipRigidbody: {fileID: 557324093202161763}
   rescalledTransform: {fileID: 4218185318637009672}
 --- !u!54 &557324093202161763
 Rigidbody:
@@ -742,14 +756,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   position:
-    X: 9973610
-    Y: 1982.14697265625
-    Z: 16085.578125
+    X: 9902912
+    Y: -12.199999809265137
+    Z: 44253.30078125
   referenceTransform: {fileID: 0}
   positionOffset: {x: 0, y: 0, z: 0}
   planet: {fileID: 7946874904111021014}
   rescaleMultiplicator: 90.9
-  rigidbody: {fileID: 557324093202161763}
+  rigidbodyTarget: {fileID: 557324093202161763}
 --- !u!1 &7435488749169675814
 GameObject:
   m_ObjectHideFlags: 0
@@ -801,8 +815,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.2248747, y: 0.54265726, z: 6.154744}
-  m_Center: {x: 0.21419649, y: 0.039007995, z: 0.3689639}
+  m_Size: {x: 3.2248747, y: 1.6816835, z: 6.154744}
+  m_Center: {x: 0.21419652, y: -0.057744846, z: 0.36896387}
 --- !u!1 &9057877204106775120
 GameObject:
   m_ObjectHideFlags: 0
@@ -1132,8 +1146,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.049483884, y: 0.021568524, z: 0.014292969}
-  m_Center: {x: 0.00021230566, y: 0.00000026949758, z: -0.014001888}
+  m_Size: {x: 0.049483884, y: 0.037832275, z: 0.01429297}
+  m_Center: {x: 0.00021230453, y: -0.00033334762, z: -0.014001888}
 --- !u!1 &8903943274771035954 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -3380275904009734957, guid: 47804206a84443241af551b067baa338, type: 3}
@@ -1158,5 +1172,5 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.049483884, y: 0.021568524, z: 0.014292969}
-  m_Center: {x: 0.00021230566, y: 0.00000026949758, z: -0.014001888}
+  m_Size: {x: 0.049483884, y: 0.03608723, z: 0.01429297}
+  m_Center: {x: 0.00021230453, y: 0.00053282577, z: -0.014001889}
