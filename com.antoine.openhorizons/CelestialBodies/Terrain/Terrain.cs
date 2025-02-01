@@ -146,7 +146,7 @@ namespace CelestialBodies.Terrain
             thread.Start();
         }
 
-        internal static void SmartUpdate(this ref Terrain terrain, Transform transform, ref Trees trees, TerrainGrass terrainGrass)
+        internal static void SmartUpdate(this ref Terrain terrain, Transform transform, ref Trees trees, ITerrainDetails[] terrainDetails)
         {
             var updatedSurface = terrain.Surface;
             if (terrain.Material.mainTexture == null || updatedSurface.TerrainFaces == null) // When we loose serialization we want to regenerate the texture
@@ -182,7 +182,7 @@ namespace CelestialBodies.Terrain
             {
                 updatedSurface.GenerateMeshLod(updatedSurface.TerrainMeshThreadCalculation);
             }
-            updatedSurface.AssignMesh(ref trees, terrainGrass);
+            updatedSurface.AssignMesh(ref trees, terrainDetails);
             terrain.SetSurface(updatedSurface);
         }
         
@@ -328,7 +328,7 @@ namespace CelestialBodies.Terrain
             return false;
         }
         
-        private static void AssignMesh(this ref Surface surface, ref Trees trees, TerrainGrass terrainGrass = null)
+        private static void AssignMesh(this ref Surface surface, ref Trees trees, ITerrainDetails [] terrainGrass = null)
         {
             for (var i = 0; i < surface.TerrainFaces.Length; i++)
             {
@@ -358,14 +358,19 @@ namespace CelestialBodies.Terrain
                                     surface.ShapeGenerator.ElevationMinMax);
 
                             if (terrainGrass != null)
-                                meshDetailReady = terrainGrass.HighDefinition(i,
-                                    surface.TerrainFaces[i].TerrainMeshData.Vertices,
-                                    surface.TerrainFaces[i].TerrainMeshData.Triangles,
-                                    surface.TerrainFaces[i].TerrainMeshData.Normals,
-                                    surface.TerrainFaces[i].TerrainMeshData.VertexColor,
-                                    surface.TerrainFaces[i].StepThreshold,
-                                    surface.ShapeGenerator.ElevationMinMax);
-                            
+                            {
+                                for (var j = 0; j < terrainGrass.Length; j++)
+                                {
+                                    meshDetailReady = terrainGrass[j].HighDefinition(i,
+                                        surface.TerrainFaces[i].TerrainMeshData.Vertices,
+                                        surface.TerrainFaces[i].TerrainMeshData.Triangles,
+                                        surface.TerrainFaces[i].TerrainMeshData.Normals,
+                                        surface.TerrainFaces[i].TerrainMeshData.VertexColor,
+                                        surface.TerrainFaces[i].StepThreshold,
+                                        surface.ShapeGenerator.ElevationMinMax);
+                                }
+                            }
+
                             if (terrainDetailReady && meshDetailReady)
                             {
                                 surface.TerrainFaces[i].TerrainMeshData.IsDoneGeneratingVertex = false;
@@ -378,11 +383,18 @@ namespace CelestialBodies.Terrain
                             if (trees.isEnabled)
                                 terrainDetailReady = trees.LowDefinition(i);
 
-                            
+
                             if (terrainGrass != null)
-                                meshDetailReady = terrainGrass.LowDefinition(i);
-                            
-                            
+                            {
+                                for (var j = 0; j < terrainGrass.Length; j++)
+                                {
+                                    meshDetailReady = terrainGrass[j].LowDefinition(i);
+                                    if(meshDetailReady == false)
+                                        break;
+                                }
+                            }
+
+
                             if (terrainDetailReady && meshDetailReady)
                             {
                                 surface.TerrainFaces[i].TerrainMeshData.IsDoneGeneratingVertex = false;

@@ -9,7 +9,7 @@ namespace CelestialBodies
 {
     static class DetailBuilder
     {
-        internal const int UpdatePerFrames = 1500;
+        internal const int UpdatePerFrames = 750;
         internal static void Initialize(this ref Trees trees)
         {
             trees.chunks = new List<Chunk>();

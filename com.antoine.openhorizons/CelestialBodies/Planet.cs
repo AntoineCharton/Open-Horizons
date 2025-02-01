@@ -15,12 +15,12 @@ namespace CelestialBodies
         [SerializeField] private Fog fog = Fog.Default();
         [SerializeField] private Ocean ocean;
         [SerializeField] private GameObject target;
-        private TerrainGrass _terrainGrasses;
+        private ITerrainDetails [] _terrainDetails;
         private Transform _localPosition;
 
         private void Start()
         {
-            _terrainGrasses = GetComponent<TerrainGrass>();
+            _terrainDetails = GetComponents<ITerrainDetails>();
             if (Application.isPlaying)
             {
                 if (target == null)
@@ -55,7 +55,7 @@ namespace CelestialBodies
         {
            
             VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, terrain.Surface.shape.Radius);
-            terrain.SmartUpdate(transform, ref trees, _terrainGrasses);
+            terrain.SmartUpdate(transform, ref trees, _terrainDetails);
             trees.UpdateDetails(transform);
             ocean.SmartUpdate(transform);
             if (Application.isPlaying)
