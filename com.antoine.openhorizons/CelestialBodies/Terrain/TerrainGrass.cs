@@ -21,10 +21,18 @@ namespace CelestialBodies.Terrain
         [FormerlySerializedAs("MaxAltitude")] [SerializeField]
         private float maxAltitude;
 
-        [SerializeField] private GameObject reference;
+        [FormerlySerializedAs("reference")] [SerializeField] private GameObject regularReference;
+        [SerializeField] private GameObject secondaryRegularReference;
+        
         [SerializeField] private GameObject stepReference;
+        [SerializeField] private GameObject secondaryStepReference;
+        
         [SerializeField] private GameObject bellowAltitudeReference;
+        [SerializeField] private GameObject secondaryBellowAltitudeReference;
+        
         [SerializeField] private GameObject aboveAltitudeReference;
+        [SerializeField] private GameObject secondaryaboveAltitudeReference;
+        
         private Vector3 _referencePosition = Vector3.one * float.MaxValue;
         private float _minAltitude;
         private float _maxAltitude;
@@ -111,8 +119,11 @@ namespace CelestialBodies.Terrain
             if (!foundDetailMesh)
             {
                 var newDetailMesh = new DetailMesh(gameObject, chunkID, material, vertices, vertexColors, indexes,
-                    _minAltitude, _maxAltitude, stepThreshold, reference,
-                    stepReference, bellowAltitudeReference, aboveAltitudeReference);
+                    _minAltitude, _maxAltitude, stepThreshold, 
+                    regularReference, secondaryRegularReference,
+                    stepReference, secondaryStepReference,
+                    bellowAltitudeReference, secondaryBellowAltitudeReference,
+                    aboveAltitudeReference, secondaryaboveAltitudeReference);
                 _detailMeshes.Add(newDetailMesh);
             }
 
@@ -155,17 +166,29 @@ namespace CelestialBodies.Terrain
         private readonly float _maxAltitude;
         private readonly float _stepThreshold;
         private readonly GameObject _reference;
+        private readonly GameObject _secondaryReference;
         private readonly GameObject _stepReference;
+        private readonly GameObject _secondaryStepReference;
         private readonly GameObject _bellowMinimumReference;
+        private readonly GameObject _secondaryBellowMinmumReference;
         private readonly GameObject _aboveMaximumReference;
+        private readonly GameObject _secondaryAboveMaximumReference;
         private List<GameObject> _pool;
         private int _addedPoolCount;
+        private List<GameObject> _secondaryPool;
+        private int _addedSecondaryPoolCount;
         private List<GameObject> _stepPool;
         private int _addedStepPoolCount;
+        private List<GameObject> _secondaryStepPool;
+        private int _addedSecondaryStepPoolCount;
         private List<GameObject> _bellowMinimumPool;
         private int _addedbellowMinimumCount;
+        private List<GameObject> _secondaryBellowMinimumPool;
+        private int _secondaryAddedbellowMinimumCount;
         private List<GameObject> _aboveMaximumPool;
         private int _addedaboveMaximumCount;
+        private List<GameObject> _secondaryAboveMaximumPool;
+        private int _secondaryAddedaboveMaximumCount;
         private readonly Noise _noise;
 
         //Mesh Subdivision
@@ -179,8 +202,10 @@ namespace CelestialBodies.Terrain
         internal DetailMesh(GameObject parent, int id, Material material, Vector3[] vertices, Color[] vertexColor,
             int[] indexes,
             float minAltitude, float maxAltitude, float stepThreshold,
-            GameObject reference, GameObject stepReference, GameObject bellowMinimumReference,
-            GameObject aboveMaximumReference)
+            GameObject reference, GameObject secondaryReference,
+            GameObject stepReference, GameObject secondaryStepReference,
+            GameObject bellowMinimumReference, GameObject secondaryBellowMinimumReference,
+            GameObject aboveMaximumReference, GameObject secondaryAboveMaximumReference)
         {
             _noise = new Noise();
             Vertices = vertices;
@@ -203,9 +228,13 @@ namespace CelestialBodies.Terrain
             Thread thread = new Thread(CalculateTriangles);
             thread.Start();
             _reference = reference;
+            _secondaryReference = secondaryReference;
             _stepReference = stepReference;
+            _secondaryStepReference = secondaryStepReference;
             _bellowMinimumReference = bellowMinimumReference;
+            _secondaryBellowMinmumReference = secondaryBellowMinimumReference;
             _aboveMaximumReference = aboveMaximumReference;
+            _secondaryAboveMaximumReference = secondaryAboveMaximumReference;
         }
 
         internal void CopyVertexColors(Color[] vertexColorToCopy)
@@ -260,13 +289,21 @@ namespace CelestialBodies.Terrain
         void InitializeDetailPool(Vector3 referencePosition)
         {
             _addedPoolCount = 0;
+            _addedSecondaryPoolCount = 0;
             _addedStepPoolCount = 0;
+            _addedSecondaryPoolCount = 0;
             _addedbellowMinimumCount = 0;
+            _secondaryAddedbellowMinimumCount = 0;
             _addedaboveMaximumCount = 0;
+            _secondaryAddedaboveMaximumCount = 0;
             _pool = InitializePool(_pool, referencePosition);
+            _secondaryPool = InitializePool(_secondaryPool, referencePosition);
             _stepPool = InitializePool(_stepPool, referencePosition);
+            _secondaryStepPool = InitializePool(_secondaryPool, referencePosition);
             _bellowMinimumPool = InitializePool(_bellowMinimumPool, referencePosition);
+            _secondaryBellowMinimumPool = InitializePool(_secondaryBellowMinimumPool, referencePosition);
             _aboveMaximumPool = InitializePool(_aboveMaximumPool, referencePosition);
+            _secondaryAboveMaximumPool = InitializePool(_secondaryAboveMaximumPool, referencePosition);
         }
 
         List<GameObject> InitializePool(List<GameObject> pool, Vector3 referencePosition)
@@ -290,8 +327,8 @@ namespace CelestialBodies.Terrain
             gameObject.transform.parent = parent;
             gameObject.transform.localPosition = position;
             gameObject.transform.LookAt(parent.position, Vector3.back);
-            gameObject.transform.Rotate(Vector3.up, -90, Space.Self);
-            gameObject.transform.Rotate(Vector3.right, _noise.Evaluate(position) * 360, Space.Self);
+            gameObject.transform.Rotate(Vector3.right, -90, Space.Self);
+            gameObject.transform.Rotate(Vector3.up, _noise.Evaluate(position) * 360, Space.Self);
         }
 
         float AddDetails(Transform parent, Vector3 referencePosition, float currentUpdateValue) // Ugly but works 
@@ -316,20 +353,23 @@ namespace CelestialBodies.Terrain
                 if (VertexColor[first].r < _stepThreshold)
                 {
                    _addedPoolCount = PlaceDetailFromPool(_reference,_pool,  parent, position, _addedPoolCount);
+                   _addedSecondaryPoolCount = PlaceDetailFromPool(_secondaryReference, _secondaryPool, parent, position, _addedSecondaryPoolCount, true);
                 }
                 else if (VertexColor[first].r != 0.99f && VertexColor[first].r != 0.98f &&
                          VertexColor[first].r != 0.97f)
                 {
                     _addedStepPoolCount = PlaceDetailFromPool(_stepReference,_stepPool, parent, position, _addedStepPoolCount);
+                    _addedSecondaryPoolCount = PlaceDetailFromPool(_secondaryStepReference, _secondaryStepPool, parent, position, _addedSecondaryPoolCount, true);
                 }
                 else if (VertexColor[first].r == 0.98f)
                 {
                     _addedbellowMinimumCount = PlaceDetailFromPool(_bellowMinimumReference,_bellowMinimumPool, parent, position, _addedbellowMinimumCount);
+                    _secondaryAddedbellowMinimumCount = PlaceDetailFromPool(_secondaryBellowMinmumReference, _secondaryBellowMinimumPool, parent, position, _secondaryAddedbellowMinimumCount, true);
                 }
                 else if (VertexColor[first].r == 0.97f)
                 {
                     _addedaboveMaximumCount = PlaceDetailFromPool(_aboveMaximumReference,_aboveMaximumPool, parent, position, _addedaboveMaximumCount);
-                    
+                    _secondaryAddedbellowMinimumCount = PlaceDetailFromPool(_secondaryAboveMaximumReference, _secondaryAboveMaximumPool, parent, position, _secondaryAddedaboveMaximumCount, true);
                 }
             }
             currentUpdateValue += UpdateSteps;
@@ -337,9 +377,16 @@ namespace CelestialBodies.Terrain
         }
         
         
-        int PlaceDetailFromPool(GameObject reference, List<GameObject> pool, Transform parent, Vector3 position, int currentCount)
+        int PlaceDetailFromPool(GameObject reference, List<GameObject> pool, Transform parent, Vector3 position, int currentCount, bool isSecondary = false)
         {
             GameObject gameObject;
+            var value = _noise.Evaluate(position);
+            
+            if (isSecondary && value >= -0.25f)
+                return currentCount;
+            if (!isSecondary && value < -0.25f)
+                return currentCount;
+            
             if (reference != null)
             {
                 for (var i = 0; i < pool.Count; i++)
@@ -458,7 +505,7 @@ namespace CelestialBodies.Terrain
                     // Sort the list by distance
                     _closestTriangles.Sort((a, b) => a.distance.CompareTo(b.distance));
                     _hasAtLeastOneTriangle = false;
-                    int count = Mathf.Min(400, numberOfTrianglesDrawn);
+                    int count = Mathf.Min(600, numberOfTrianglesDrawn);
                     if (_trianglesIndexes == null || _trianglesIndexes.Length != count * 3)
                         _trianglesIndexes = new int[count * 3];
                     for (int j = 0; j < count; j++)
@@ -508,7 +555,7 @@ namespace CelestialBodies.Terrain
             if (_mesh == null)
             {
                 _mesh = new Mesh();
-                _mesh.indexFormat = IndexFormat.UInt32;
+                _mesh.indexFormat = IndexFormat.UInt16;
             }
             else
             {
@@ -521,7 +568,7 @@ namespace CelestialBodies.Terrain
                 _mesh.colors = VertexColor;
                 _mesh.triangles = _trianglesIndexes;
                 MeshCollider.sharedMesh = _mesh;
-                _mesh = SubdivideMesh(Vertices, _trianglesIndexes, VertexColor, _mesh, 1f);
+                _mesh = SubdivideMesh(Vertices, _trianglesIndexes, VertexColor, _mesh);
                 MeshFilter.mesh = _mesh;
                 if (!MeshFilter.gameObject.activeInHierarchy)
                 {
