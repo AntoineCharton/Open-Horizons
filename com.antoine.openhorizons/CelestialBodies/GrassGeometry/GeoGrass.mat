@@ -29,13 +29,13 @@ Material:
     - _DistanceDetail: 1
     - _GrassSupression: 0.227
     - _Height: 0.95
-    - _RandomHeight: 0.17
-    - _RandomWidth: 0.04
-    - _TessellationUniform: 32
-    - _Width: 0.25
+    - _RandomHeight: 0.3
+    - _RandomWidth: 0.15
+    - _TessellationUniform: 48
+    - _Width: 0.15
     - _WindStrength: 0.2
     m_Colors:
-    - _Color: {r: 0.29568553, g: 0.38993704, b: 0.28080368, a: 1}
-    - _Color2: {r: 0.3148562, g: 0.47798735, b: 0.2931054, a: 1}
+    - _Color: {r: 0.20796989, g: 0.34591186, b: 0.19036028, a: 1}
+    - _Color2: {r: 0.28330645, g: 0.44025147, b: 0.26165885, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

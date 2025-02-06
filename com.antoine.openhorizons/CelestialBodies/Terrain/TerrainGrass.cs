@@ -315,7 +315,7 @@ namespace CelestialBodies.Terrain
             {
                 if (Vector3.Distance(referencePosition, pool[i].transform.position) > 400)
                 {
-                    pool[i].transform.position = Vector3.one * 10000;
+                    pool[i].transform.position = Vector3.one * 250000;
                 }
             }
 

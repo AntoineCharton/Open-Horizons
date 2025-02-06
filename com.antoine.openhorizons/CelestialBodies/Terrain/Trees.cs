@@ -397,7 +397,6 @@ namespace CelestialBodies
             
             if (interactableReference != null && _interactableReference == null)
             {
-                Debug.Log("Interactable reference");
                 _interactableReference = GameObject.Instantiate(interactableReference, parent, true);
                 _secondInteractableReference = GameObject.Instantiate(interactableReference, parent, true);
             }
