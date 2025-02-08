@@ -236,6 +236,8 @@ void geom(uint primitiveID : SV_PrimitiveID, triangle Varyings input[3], inout T
 	output.vertexColor = input[0].vertexColor;
 	float3 cameraPos = _WorldSpaceCameraPos;
 	float3 positionWS = input[1].positionWS;
+	float noiseValue = snoise(positionWS);
+	positionWS = float3(positionWS.x + (noiseValue * 0.2f), positionWS.y + (noiseValue * 0.2f), positionWS.z + (noiseValue * 0.2f));
 	
 	#ifdef DISTANCE_DETAIL
 		float3 vtcam = cameraPos - positionWS;
@@ -249,7 +251,7 @@ void geom(uint primitiveID : SV_PrimitiveID, triangle Varyings input[3], inout T
 
 	output.bladeSegments = bladeSegments;
 	
-	float noiseValue = snoise(positionWS);
+	
 	float fadeValue = saturate(lerp(bladeSegments, bladeSegmentsFadeEnd, noiseValue));
 	if (fadeValue <= 0.25){
 		// Too far away, don't render grass blades (should only really be used for first person camera)

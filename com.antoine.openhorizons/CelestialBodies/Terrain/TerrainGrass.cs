@@ -505,7 +505,7 @@ namespace CelestialBodies.Terrain
                     // Sort the list by distance
                     _closestTriangles.Sort((a, b) => a.distance.CompareTo(b.distance));
                     _hasAtLeastOneTriangle = false;
-                    int count = Mathf.Min(400, numberOfTrianglesDrawn);
+                    int count = Mathf.Min(500, numberOfTrianglesDrawn);
                     if (_trianglesIndexes == null || _trianglesIndexes.Length != count * 3)
                         _trianglesIndexes = new int[count * 3];
                     for (int j = 0; j < count; j++)
