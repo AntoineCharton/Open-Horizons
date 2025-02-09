@@ -31,7 +31,11 @@ public struct Cloud
     
     public Vector3 ShapeOffset => shapeOffset;
 
-    public Color ScatteringTint => scatteringTint;
+    public Color ScatteringTint
+    {
+        get { return scatteringTint; }
+        internal set => scatteringTint = value;
+    }
 
     public float WindOrientation => windOrientation;
 

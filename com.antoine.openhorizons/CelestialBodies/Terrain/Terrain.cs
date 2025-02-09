@@ -1089,18 +1089,21 @@ namespace CelestialBodies.Terrain
                     tint = new Gradient();
                 return tint;
             }
+            internal set => tint = value;
         }
 
         [SerializeField] private Texture2D texture;
         public Texture2D Texture
         {
             get => texture;
+            internal set => texture = value;
         }
         
         [SerializeField] private Texture2D textureNormal;
         public Texture2D TextureNormal
         {
             get => textureNormal;
+            internal set => textureNormal = value;
         }
 
         [SerializeField] private Color stepColor;
@@ -1108,6 +1111,7 @@ namespace CelestialBodies.Terrain
         public Color StepColor
         {
             get => stepColor;
+            internal set => stepColor = value;
         }
         
         [SerializeField] private Texture2D textureStep;
@@ -1132,6 +1136,7 @@ namespace CelestialBodies.Terrain
         public float TextureBlend
         {
             get => textureBlend;
+            internal set => textureBlend = value;
         }
 
         [SerializeField, HideInInspector] private Material material;

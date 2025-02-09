@@ -119,6 +119,36 @@ namespace CelestialBodies
             return sky.IsVisible(cameraPlanes, transform);
         }
 
+        public void SetTint(Gradient gradient)
+        {
+            terrain.Tint = gradient;
+        }
+        
+        public void SetTexture(Texture2D texture)
+        {
+            terrain.Texture = texture;
+        }
+        
+        public void SetTextureNormal(Texture2D texture)
+        {
+            terrain.TextureNormal = texture;
+        }
+
+        public void SetTexturBlend(float blend)
+        {
+            terrain.TextureBlend = blend;
+        }
+
+        public void SetStepColor(Color color)
+        {
+            terrain.StepColor = color;
+        }
+
+        public void SetScateringTint(Color color)
+        {
+            cloud.ScatteringTint = color;
+        }
+        
         public GameObject GameObject
         {
             get => gameObject;
