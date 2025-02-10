@@ -966,6 +966,8 @@ namespace CelestialBodies.Terrain
                     noiseSettings = new NoiseLayer[0];
                 return noiseSettings;
             }
+
+            internal set => noiseSettings = value;
         }
     }
 
@@ -1074,6 +1076,7 @@ namespace CelestialBodies.Terrain
         internal Surface Surface
         {
             get => surface;
+            set => surface = value;
         }
 
         internal void SetSurface(Surface newSurface)

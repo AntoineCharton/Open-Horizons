@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 
 namespace CelestialBodies.Terrain
 {
-    internal class TerrainGrass : MonoBehaviour, ITerrainDetails
+    public class TerrainGrass : MonoBehaviour, ITerrainDetails
     {
         private List<DetailMesh> _detailMeshes;
 
@@ -74,6 +74,12 @@ namespace CelestialBodies.Terrain
             }
         }
 
+        public void SetMinMaxGrassAltitude(float min, float max)
+        {
+            minAltitude = min;
+            maxAltitude = max;
+        }
+        
         public bool LowDefinition(int chunkID)
         {
             for (var i = 0; i < _detailMeshes.Count; i++)

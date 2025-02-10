@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using CelestialBodies.Clouds.Rendering;
 using CelestialBodies.Terrain;
 using CelestialBodies.Sky;
@@ -147,6 +148,29 @@ namespace CelestialBodies
         public void SetScateringTint(Color color)
         {
             cloud.ScatteringTint = color;
+        }
+
+        public void SetSurfaceNoise(NoiseLayer[] noiseLayer)
+        {
+            var surface = terrain.Surface;
+            var shape = surface.shape;
+            shape.NoiseSettings = noiseLayer;
+            surface.shape = shape;
+            terrain.Surface = surface;
+        }
+
+        public void SetReferences(List<Reference> references)
+        {
+            trees.references = references;
+        }
+        
+        public void SetCloud(float startCloud, float endCloud, float densityMultiplier, float shapeFactor, float shapeScale)
+        {
+            cloud.BottomAltitude = startCloud;
+            cloud.AltitudeRange = endCloud;
+            cloud.DensityMultipler = densityMultiplier;
+            cloud.ShapeFactor = shapeFactor;
+            cloud.ShapeScale = shapeScale;
         }
         
         public GameObject GameObject

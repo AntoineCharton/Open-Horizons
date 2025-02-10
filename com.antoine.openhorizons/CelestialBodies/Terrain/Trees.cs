@@ -288,7 +288,7 @@ namespace CelestialBodies
     }
 
     [Serializable]
-    class Reference
+    public class Reference
     {
         [SerializeField] internal GameObject reference;
         [SerializeField] internal GameObject interactableReference;

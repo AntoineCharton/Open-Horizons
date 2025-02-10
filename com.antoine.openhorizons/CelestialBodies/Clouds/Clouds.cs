@@ -41,9 +41,17 @@ public struct Cloud
 
     public float WindSpeed => windSpeed;
 
-    public float AltitudeRange => altitudeRange;
+    public float AltitudeRange
+    {
+        get => altitudeRange;
+        internal set => altitudeRange = value;
+    }
 
-    public float BottomAltitude => bottomAltitude;
+    public float BottomAltitude
+    {
+        get => bottomAltitude;
+        internal set => bottomAltitude = value;
+    }
 
     public float MicroErosionScale => microErosionScale;
 
@@ -55,9 +63,21 @@ public struct Cloud
 
     public float ErosionFactor => erosionFactor;
 
-    public float ShapeScale => shapeScale;
+    public float ShapeScale
+    {
+        get => shapeScale;
+        internal set => shapeScale = value;
+    }
 
-    public float ShapeFactor => shapeFactor;
+    public float ShapeFactor
+    {
+        get => shapeFactor;
+        internal set => shapeFactor = value;
+    }
 
-    public float DensityMultipler => densityMultipler;
+    public float DensityMultipler
+    {
+        get => densityMultipler;
+        internal set => densityMultipler = value;
+    }
 }
