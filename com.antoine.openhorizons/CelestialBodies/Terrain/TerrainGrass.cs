@@ -79,6 +79,11 @@ namespace CelestialBodies.Terrain
             minAltitude = min;
             maxAltitude = max;
         }
+
+        public void SetDefaultDetail(GameObject defaultDetail)
+        {
+            regularReference = defaultDetail;
+        }
         
         public bool LowDefinition(int chunkID)
         {
