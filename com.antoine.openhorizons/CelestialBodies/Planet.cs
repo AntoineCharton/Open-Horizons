@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using CelestialBodies.Clouds.Rendering;
 using CelestialBodies.Terrain;
@@ -164,6 +165,26 @@ namespace CelestialBodies
             trees.references = references;
         }
         
+        public void OverrideReferences(List<ReferenceOverride> references)
+        {
+            if (trees.references.Count == references.Count)
+            {
+                for (int i = 0; i < references.Count; i++)
+                {
+                    if (references[i].Reference != null)
+                    {
+                        trees.references[i].reference = references[i].Reference;
+                        trees.references[i].interactableReference = references[i].Interactable;
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogWarning("Reference must be the same");
+            }
+            
+        }
+        
         public void SetCloud(float startCloud, float endCloud, float densityMultiplier, float shapeFactor, float shapeScale)
         {
             cloud.BottomAltitude = startCloud;
@@ -177,5 +198,12 @@ namespace CelestialBodies
         {
             get => gameObject;
         }
+    }
+    
+    [Serializable]
+    public class ReferenceOverride
+    {
+        [SerializeField] internal GameObject Reference;
+        [SerializeField] internal GameObject Interactable;
     }
 }

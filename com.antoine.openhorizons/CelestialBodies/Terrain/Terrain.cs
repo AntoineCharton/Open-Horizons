@@ -671,6 +671,30 @@ namespace CelestialBodies.Terrain
 
             return normals;
         }
+        
+        private static float EvaluatFractalNoise(this NoiseSettings noiseSettings, FastNoise noise, Vector3 point)
+        {
+            var noiseValue = 0f;
+            var frequency = noiseSettings.BaseRoughness;
+            var amplitude = 1f;
+            var weight = 1f;
+
+            for (int i = 0; i < noiseSettings.LayersCount; i++)
+            {
+                Vector3 position = point * frequency + noiseSettings.Center;
+                var v = 1 - Mathf.Abs(noise.GetValueFractal(position.x, position.y, position.z));
+                v *= v;
+                v *= weight;
+                weight = Mathf.Clamp01(v * noiseSettings.WeightMultiplier);
+                noiseValue += v * amplitude;
+                frequency *= noiseSettings.Roughness;
+                amplitude *= noiseSettings.Persistence;
+            }
+
+            noiseValue = Mathf.Max(0, noiseValue - noiseSettings.MinValue);
+            return noiseValue * noiseSettings.Strength;
+        }
+
 
         private static float EvaluateRigidNoise(this NoiseSettings noiseSettings, Noise noise, Vector3 point)
         {
@@ -719,6 +743,8 @@ namespace CelestialBodies.Terrain
                     return EvaluateSimpleNoise(noiseFilter.NoiseSettings, noiseFilter.Noise, position);
                 case NoiseSettings.FilterType.Rigid:
                     return EvaluateRigidNoise(noiseFilter.NoiseSettings, noiseFilter.Noise, position);
+                case NoiseSettings.FilterType.Fractal:
+                    return EvaluatFractalNoise(noiseFilter.NoiseSettings, noiseFilter.FastNoise, position);
                 default:
                     return -100000000;
             }
@@ -1024,7 +1050,8 @@ namespace CelestialBodies.Terrain
         public enum FilterType
         {
             Simple,
-            Rigid
+            Rigid,
+            Fractal
         }
 
         [SerializeField] private FilterType filter;
@@ -1184,10 +1211,12 @@ namespace CelestialBodies.Terrain
     {
         internal NoiseSettings NoiseSettings;
         internal readonly Noise Noise;
+        internal readonly FastNoise FastNoise;
 
         public NoiseFilter(NoiseSettings settings)
         {
             Noise = new Noise();
+            FastNoise = new FastNoise();
             NoiseSettings = settings;
         }
     }
