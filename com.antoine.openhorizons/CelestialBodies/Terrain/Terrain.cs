@@ -1007,7 +1007,11 @@ namespace CelestialBodies.Terrain
         public bool UseFirstLayerAsMask => useFirstLayerAsMask;
 
         [SerializeField] private NoiseSettings noiseSettings;
-        public NoiseSettings NoiseSettings => noiseSettings;
+        public NoiseSettings NoiseSettings
+        {
+            get { return noiseSettings; }
+            internal set { noiseSettings = value; }
+        }
 
         public static NoiseLayer Default()
         {
@@ -1073,7 +1077,12 @@ namespace CelestialBodies.Terrain
         [SerializeField] private float persistence;
         public float Persistence => persistence;
         [SerializeField] private Vector3 center;
-        public Vector3 Center => center;
+        public Vector3 Center
+        {
+            get { return center; }
+            internal set { center = value; }
+        }
+
         [SerializeField] private float minValue;
         public float MinValue => minValue;
         [SerializeField] private float weightMultiplier;

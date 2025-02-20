@@ -101,6 +101,17 @@ namespace CelestialBodies
             cloud.Visible = isActive;
         }
 
+        public void SetNoisePosition(Vector3 position)
+        {
+            var Noises = terrain.Surface.shape.NoiseSettings;
+            for (var i = 0; i < Noises.Length; i++)
+            {
+                var noiseSettings = Noises[i].NoiseSettings;
+                noiseSettings.Center = position;
+                Noises[i].NoiseSettings = noiseSettings;
+            }
+        }
+
         public void OceanLOD(bool isLOD)
         {
             ocean.SetLOD(isLOD);
