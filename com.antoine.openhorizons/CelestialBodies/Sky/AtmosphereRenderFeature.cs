@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -40,7 +41,7 @@ namespace CelestialBodies.Sky
 
         public static void RemoveEffect(IAtmosphereEffect effect)
         {
-            if(effect == currentActiveEffect)
+            if (effect == currentActiveEffect)
                 currentActiveEffect = null;
         }
 
@@ -48,27 +49,37 @@ namespace CelestialBodies.Sky
         private SortedEffect visibleEffects;
 
         private Plane[] cameraPlanes;
-        
+
         private void CullAndSortEffects(Camera camera)
         {
-            if(currentActiveEffect == null)
-                return;
-            Profiler.BeginSample("Cull atmosphere");
-            if (cameraPlanes == null || cameraPlanes.Length != 6)
+            try
             {
-                cameraPlanes = new Plane[6];
-            }
-            // Perform culling of active effects
-            GeometryUtility.CalculateFrustumPlanes(camera, cameraPlanes);
-            
-            if (currentActiveEffect.IsVisible(cameraPlanes))
-            {
-                visibleEffects = new SortedEffect
+                if (currentActiveEffect == null)
+                    return;
+                Profiler.BeginSample("Cull atmosphere");
+                if (cameraPlanes == null || cameraPlanes.Length != 6)
                 {
-                    effect = currentActiveEffect,
-                };
+                    cameraPlanes = new Plane[6];
+                }
+
+                // Perform culling of active effects
+                GeometryUtility.CalculateFrustumPlanes(camera, cameraPlanes);
+
+                if (currentActiveEffect.IsVisible(cameraPlanes))
+                {
+                    visibleEffects = new SortedEffect
+                    {
+                        effect = currentActiveEffect,
+                    };
+                }
+
+                Profiler.EndSample();
             }
-            Profiler.EndSample();
+            catch (Exception e)
+            {
+                Debug.LogWarning("Something went wrong reseting sky");
+                currentActiveEffect = null;
+            }
         }
 
 
@@ -81,7 +92,7 @@ namespace CelestialBodies.Sky
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
-            if(currentActiveEffect == null)
+            if (currentActiveEffect == null)
                 return;
             Profiler.BeginSample("Execute Atmophere Effect");
             CommandBuffer cmd = CommandBufferPool.Get("Atmosphere Effects");
@@ -121,7 +132,7 @@ namespace CelestialBodies.Sky
 
         void RenderEffects(CommandBuffer cmd, RenderTargetIdentifier colorSource, bool inPrefabMode)
         {
-            if(visibleEffects.effect == null)
+            if (visibleEffects.effect == null)
                 return;
             BlitUtility.BeginBlitLoop(cmd, colorSource);
 
