@@ -25,6 +25,11 @@ namespace BigWorld
             transform.localScale = currentScale;
         }
 
+        public void SetPosition(DoubleVector3 position)
+        {
+            this.position = position;
+        }
+
         public void AddOffset(Vector3 difference)
         {
             position = new DoubleVector3(position.X + difference.x, position.Y + difference.y,position.Z + difference.z);
