@@ -243,7 +243,7 @@ void geom(uint primitiveID : SV_PrimitiveID, triangle Varyings input[3], inout T
 		float3 vtcam = cameraPos - positionWS;
 		float distSqr = dot(vtcam, vtcam);
 		float bladeSegments = lerp(BLADE_SEGMENTS, 0, saturate(distSqr * 0.0005 - 0.1));
-		float bladeSegmentsFadeEnd = lerp(BLADE_SEGMENTS, 0, saturate(distSqr * 0.0001 - 0.1));
+		float bladeSegmentsFadeEnd = lerp(BLADE_SEGMENTS, 0, saturate(distSqr * 0.00002));
 	#else
 		int bladeSegments = BLADE_SEGMENTS;
 		int bladeSegmentsFadeEnd =  BLADE_SEGMENTS;
@@ -253,7 +253,7 @@ void geom(uint primitiveID : SV_PrimitiveID, triangle Varyings input[3], inout T
 	
 	
 	float fadeValue = saturate(lerp(bladeSegments, bladeSegmentsFadeEnd, noiseValue));
-	if (fadeValue <= 0.25){
+	if (fadeValue <= 0.52){
 		// Too far away, don't render grass blades (should only really be used for first person camera)
 		return;
 	}

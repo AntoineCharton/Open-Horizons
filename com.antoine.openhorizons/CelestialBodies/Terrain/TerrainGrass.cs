@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
+using UnityEngine.Profiling;
 using UnityEngine.Rendering;
 using UnityEngine.Serialization;
 using Object = UnityEngine.Object;
@@ -232,6 +233,7 @@ namespace CelestialBodies.Terrain
             MeshRenderer = newMesh.AddComponent<MeshRenderer>();
             MeshRenderer.material = material;
             MeshRenderer.sharedMaterial.SetFloat(GrassSupression, stepThreshold);
+            MeshRenderer.shadowCastingMode = ShadowCastingMode.Off;
             MeshFilter = newMesh.AddComponent<MeshFilter>();
             MeshCollider = newMesh.AddComponent<MeshCollider>();
             ID = id;
@@ -273,7 +275,9 @@ namespace CelestialBodies.Terrain
             {
                 if (currentUpdateValue < 0f)
                 {
+                    Profiler.BeginSample("Assign");
                     AssignTriangles();
+                    Profiler.EndSample();
                     currentUpdateValue = 0f;
                 }
                 else if(generateDetails)
@@ -290,7 +294,9 @@ namespace CelestialBodies.Terrain
             else if (!_submitedCalculation)
             {
                 _targetPosition = referencePosition;
+                Profiler.BeginSample("Submit");
                 SumbitCalculation(_targetPosition);
+                Profiler.EndSample();
                 return -1;
             }
 
@@ -351,7 +357,7 @@ namespace CelestialBodies.Terrain
             int frameLength = (int)(totalLength * frameFraction);
             int start = (int)(totalLength * currentUpdateValue);
             int toProcess = Mathf.Min(frameLength, totalLength - start);
-            
+            Profiler.BeginSample("Add details loop");
             for (var i = start; i < toProcess; i = i + 3)
             {
                 var first = _trianglesIndexes[i];
@@ -361,28 +367,40 @@ namespace CelestialBodies.Terrain
                     (_noise.Evaluate(Vertices[first]) + 1) / 2);
                 position = Vector3.Lerp(position, Vertices[third],
                     (_noise.Evaluate(Vertices[first] + new Vector3(1000, 0, 0)) + 1) / 2);
-                if (VertexColor[first].r < _stepThreshold)
+
+                if (Vector3.Distance(position + parent.position, referencePosition) < 150)
                 {
-                   _addedPoolCount = PlaceDetailFromPool(_reference,_pool,  parent, position, _addedPoolCount);
-                   _addedSecondaryPoolCount = PlaceDetailFromPool(_secondaryReference, _secondaryPool, parent, position, _addedSecondaryPoolCount, true);
-                }
-                else if (VertexColor[first].r != 0.99f && VertexColor[first].r != 0.98f &&
-                         VertexColor[first].r != 0.97f)
-                {
-                    _addedStepPoolCount = PlaceDetailFromPool(_stepReference,_stepPool, parent, position, _addedStepPoolCount);
-                    _addedSecondaryPoolCount = PlaceDetailFromPool(_secondaryStepReference, _secondaryStepPool, parent, position, _addedSecondaryPoolCount, true);
-                }
-                else if (VertexColor[first].r == 0.98f)
-                {
-                    _addedbellowMinimumCount = PlaceDetailFromPool(_bellowMinimumReference,_bellowMinimumPool, parent, position, _addedbellowMinimumCount);
-                    _secondaryAddedbellowMinimumCount = PlaceDetailFromPool(_secondaryBellowMinmumReference, _secondaryBellowMinimumPool, parent, position, _secondaryAddedbellowMinimumCount, true);
-                }
-                else if (VertexColor[first].r == 0.97f)
-                {
-                    _addedaboveMaximumCount = PlaceDetailFromPool(_aboveMaximumReference,_aboveMaximumPool, parent, position, _addedaboveMaximumCount);
-                    _secondaryAddedbellowMinimumCount = PlaceDetailFromPool(_secondaryAboveMaximumReference, _secondaryAboveMaximumPool, parent, position, _secondaryAddedaboveMaximumCount, true);
+                    if (VertexColor[first].r < _stepThreshold)
+                    {
+                        _addedPoolCount = PlaceDetailFromPool(_reference, _pool, parent, position, _addedPoolCount);
+                        _addedSecondaryPoolCount = PlaceDetailFromPool(_secondaryReference, _secondaryPool, parent,
+                            position, _addedSecondaryPoolCount, true);
+                    }
+                    else if (VertexColor[first].r != 0.99f && VertexColor[first].r != 0.98f &&
+                             VertexColor[first].r != 0.97f)
+                    {
+                        _addedStepPoolCount = PlaceDetailFromPool(_stepReference, _stepPool, parent, position,
+                            _addedStepPoolCount);
+                        _addedSecondaryPoolCount = PlaceDetailFromPool(_secondaryStepReference, _secondaryStepPool,
+                            parent, position, _addedSecondaryPoolCount, true);
+                    }
+                    else if (VertexColor[first].r == 0.98f)
+                    {
+                        _addedbellowMinimumCount = PlaceDetailFromPool(_bellowMinimumReference, _bellowMinimumPool,
+                            parent, position, _addedbellowMinimumCount);
+                        _secondaryAddedbellowMinimumCount = PlaceDetailFromPool(_secondaryBellowMinmumReference,
+                            _secondaryBellowMinimumPool, parent, position, _secondaryAddedbellowMinimumCount, true);
+                    }
+                    else if (VertexColor[first].r == 0.97f)
+                    {
+                        _addedaboveMaximumCount = PlaceDetailFromPool(_aboveMaximumReference, _aboveMaximumPool, parent,
+                            position, _addedaboveMaximumCount);
+                        _secondaryAddedbellowMinimumCount = PlaceDetailFromPool(_secondaryAboveMaximumReference,
+                            _secondaryAboveMaximumPool, parent, position, _secondaryAddedaboveMaximumCount, true);
+                    }
                 }
             }
+            Profiler.EndSample();
             currentUpdateValue += UpdateSteps;
             return currentUpdateValue;
         }
@@ -496,7 +514,7 @@ namespace CelestialBodies.Terrain
                             }
                         }
 
-                        if (distance < 400)
+                        if (distance < 1000)
                         {
                             numberOfTrianglesDrawn++;
                         }
@@ -516,7 +534,7 @@ namespace CelestialBodies.Terrain
                     // Sort the list by distance
                     _closestTriangles.Sort((a, b) => a.distance.CompareTo(b.distance));
                     _hasAtLeastOneTriangle = false;
-                    int count = Mathf.Min(500, numberOfTrianglesDrawn);
+                    int count = Mathf.Min(800, numberOfTrianglesDrawn);
                     if (_trianglesIndexes == null || _trianglesIndexes.Length != count * 3)
                         _trianglesIndexes = new int[count * 3];
                     for (int j = 0; j < count; j++)
