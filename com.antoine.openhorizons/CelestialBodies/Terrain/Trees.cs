@@ -12,12 +12,21 @@ namespace CelestialBodies
         internal const int UpdatePerFrames = 1500;
         internal static void Initialize(this ref Trees trees)
         {
+            trees.removedTrees = new List<TreeRemover>();
             trees.chunks = new List<Chunk>();
             trees.Noise = new Noise();
             for (var i = 0; i < trees.references.Count; i++)
             {
                 trees.references[i].pool.Initialize(UpdatePerFrames);
             }
+        }
+
+        internal static void RemoveModifier(this ref Trees trees, Vector3 position, float distance)
+        {
+            var newModifier = new TreeRemover();
+            newModifier.position = position;
+            newModifier.distance = distance;
+            trees.removedTrees.Add(newModifier);
         }
 
         internal static void GenerateInteractable(this ref Trees trees, Vector3 targetPosition, Transform parent)
@@ -169,10 +178,23 @@ namespace CelestialBodies
             {
                 sum += trees.references[i].frequence;
             }
+
+            var isRemoved = false;
+            for (var i = 0; i < trees.removedTrees.Count; i++)
+            {
+                if (Vector3.Distance(currentPosition, trees.removedTrees[i].position) < trees.removedTrees[i].distance)
+                {
+                    isRemoved = true;
+                    break;
+                }
+            }
+            
             if (!trees.chunks[trees.CurrentChunkEvaluated].IsAssigned(currentID) &&
                 !trees.chunks[trees.CurrentChunkEvaluated].IsAvailable() && 
                 (trees.Noise.Evaluate(currentPosition) + 1) / 2 < trees.plantsDensity &&
-                vertexColor.r < trees.StepThreshold)
+                vertexColor.r < trees.StepThreshold &&
+                !isRemoved
+                )
             {
                 var targetValue = 0f;
                 for (int i = 0; i < trees.references.Count; i++)
@@ -263,6 +285,12 @@ namespace CelestialBodies
             }
         }
     }
+
+    struct TreeRemover
+    {
+        internal Vector3 position;
+        internal float distance;
+    }
     
     [Serializable]
     struct Trees
@@ -274,6 +302,7 @@ namespace CelestialBodies
         [SerializeField] internal List<Reference> references;
         [SerializeField, HideInInspector] internal List<Chunk> chunks;
         [SerializeField] internal float plantsDensity;
+        internal List<TreeRemover> removedTrees;
         //internal float MinAlitude;
         //internal float MaxAltitude;
         internal float StepThreshold;

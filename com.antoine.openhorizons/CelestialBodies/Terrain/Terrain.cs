@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -80,6 +81,30 @@ namespace CelestialBodies.Terrain
             surface.TerrainFaces = null;
         }
 
+        internal static Vector3 GetFirstPointAboveOcean(this Terrain terrain, Ocean ocean, float offset)
+        {
+            var position = Vector3.zero;
+            for (var i = 0; i < terrain.Surface.TerrainFaces.Length; i++)
+            {
+                for (var j = 0; j < terrain.Surface.minResolution; j++)
+                {
+                    CalculateFace(ref terrain.Surface.TerrainFaces[i], terrain.Surface.minResolution, j, false);
+                    position = terrain.Surface.TerrainFaces[i].TerrainMeshData.Vertices[j];
+                    if (Vector3.Distance(Vector3.zero, position) > ocean.surface.shape.Radius + offset)
+                    {
+                        position = terrain.Surface.TerrainFaces[i].TerrainMeshData.Vertices[j];
+                        return position;
+                    }
+                    else
+                    {
+                        position = Vector3.zero;
+                    }
+                }
+            }
+
+            return position;
+        }
+
         internal static void UpdateMeshResolution(this ref Terrain terrain, Vector3 position)
         {
             if(terrain.Surface.AllFacesGenerated == false)
@@ -144,6 +169,12 @@ namespace CelestialBodies.Terrain
             });
             thread.Name = "Terrain Mesh Calculation";
             thread.Start();
+        }
+
+        internal static bool IsInitialized(this Terrain terrain)
+        {
+            var updatedSurface = terrain.Surface;
+            return terrain.Material.mainTexture != null && updatedSurface.TerrainFaces != null && updatedSurface.Dirty == false;
         }
 
         internal static void SmartUpdate(this ref Terrain terrain, Transform transform, ref Trees trees, ITerrainDetails[] terrainDetails)
@@ -541,13 +572,13 @@ namespace CelestialBodies.Terrain
             }
             else
             {
-                CalculateFaceParallel(terrainFace, resolution);
+                CalculateFaceParallel(terrainFace, resolution, false);
             }
 
             return true;
         }
 
-        private static void CalculateFace(ref TerrainFace terrainFace, int resolution, int y)
+        private static void CalculateFace(ref TerrainFace terrainFace, int resolution, int y, bool applyModifiers)
         {
             
             int triIndex = y * (resolution - 1) * 6;
@@ -576,7 +607,7 @@ namespace CelestialBodies.Terrain
                     triIndex += 6;
                 }
                 Vector3 pointOnUnitSphere = PointOnCubeToPointOnSphere(pointOnUnitCube);
-                terrainFace.TerrainMeshData.Vertices[i] = terrainFace.ShapeGenerator.CalculatePointOnPlanet(pointOnUnitSphere);
+                terrainFace.TerrainMeshData.Vertices[i] = terrainFace.ShapeGenerator.CalculatePointOnPlanet(pointOnUnitSphere, applyModifiers);
             }
 
             static Vector3 PointOnCubeToPointOnSphere(Vector3 p)
@@ -588,8 +619,16 @@ namespace CelestialBodies.Terrain
                 float y = p.y * (float)  Math.Sqrt(1 - (z2 + x2) / 2 + (z2 * x2) / 3);
                 float z = p.z * (float)  Math.Sqrt(1 - (x2 + y2) / 2 + (x2 * y2) / 3);
                 return new Vector3(x, y, z);
-
             }
+        }
+
+        public static void AddFlatModifier(this ref Terrain terrain, Vector3 position, float distance, float easeDistance)
+        {
+            var newFlatModifier = new FlatModifier();
+            newFlatModifier.position = position;
+            newFlatModifier.distance = distance;
+            newFlatModifier.easeDistance = easeDistance;
+            terrain.Surface.ShapeGenerator.FlatModifiers.Add(newFlatModifier);
         }
 
         private static void InitializeFace(ref TerrainFace terrainFace, int resolution)
@@ -623,23 +662,23 @@ namespace CelestialBodies.Terrain
             terrainFace.TerrainMeshData.IsGeneratingVertex = false;
         }
 
-        private static void CalculateFaceSynchronous(ref TerrainFace terrainFace, int resolution)
+        private static void CalculateFaceSynchronous(ref TerrainFace terrainFace, int resolution, bool applyModifiers)
         {
             InitializeFace(ref terrainFace, resolution);
             for(var y = 0; y < resolution; y ++)
             {
-                CalculateFace(ref terrainFace, resolution, y);
+                CalculateFace(ref terrainFace, resolution, y, applyModifiers);
             }
 
             FinishFaceCalculation(ref terrainFace);
         }
 
-        private static void CalculateFaceParallel(TerrainFace terrainFace, int resolution)
+        private static void CalculateFaceParallel(TerrainFace terrainFace, int resolution, bool applyModifiers)
         {
             InitializeFace(ref terrainFace, resolution);
             Parallel.For(0, resolution, y =>
             {
-                CalculateFace(ref terrainFace, resolution, y);
+                CalculateFace(ref terrainFace, resolution, y, applyModifiers);
             });
             FinishFaceCalculation(ref terrainFace);
         }
@@ -750,7 +789,7 @@ namespace CelestialBodies.Terrain
             }
         }
 
-        private static Vector3 CalculatePointOnPlanet(this ref ShapeGenerator shapeGenerator, Vector3 pointOnUnitSphere)
+        private static Vector3 CalculatePointOnPlanet(this ref ShapeGenerator shapeGenerator, Vector3 pointOnUnitSphere, bool applyModifiers)
         {
             float firstLayerValue = 0;
             float elevation = 0;
@@ -775,7 +814,30 @@ namespace CelestialBodies.Terrain
 
             elevation = shapeGenerator.Settings.Radius * (1 + elevation);
             shapeGenerator.ElevationMinMax.AddValue(elevation);
-            return pointOnUnitSphere * elevation;
+            var targetElevation = pointOnUnitSphere * elevation;
+            if (applyModifiers)
+            {
+                for (var i = 0; i < shapeGenerator.FlatModifiers.Count; i++)
+                {
+                    var modifier = shapeGenerator.FlatModifiers[i];
+                    var distance = Vector3.Distance(targetElevation, modifier.position);
+                    if (distance < modifier.distance)
+                    {
+                        var flatElevation = pointOnUnitSphere * Vector3.Distance(modifier.position, Vector3.zero);
+                        var remapValue = Remap(distance, modifier.easeDistance, modifier.distance, 0, 1);
+                        flatElevation = Vector3.Lerp(flatElevation, targetElevation, remapValue);
+                        targetElevation = flatElevation;
+                        break;
+                    }
+                }
+            }
+            
+            float Remap(float value, float from1, float to1, float from2, float to2)
+            {
+                return (value - from1) / (to1 - from1) * (to2 - from2) + from2;
+            }
+
+            return targetElevation;
         }
         
         private static void UpdateElevation(this ref Terrain terrain, MinMax elevationMinMax)
@@ -836,7 +898,7 @@ namespace CelestialBodies.Terrain
                 {
                     terrainMeshThreadCalculation.SubmitedNewCalculation = false;
                     terrainMeshThreadCalculation.IsCalculating = true;
-                    CalculateFaceSynchronous(ref terrainMeshThreadCalculation.TerrainFace, terrainMeshThreadCalculation.Resolution);
+                    CalculateFaceSynchronous(ref terrainMeshThreadCalculation.TerrainFace, terrainMeshThreadCalculation.Resolution, terrainMeshThreadCalculation.IsHighResolution);
                 }
                 Profiler.EndSample();
                 Thread.Sleep(1);
@@ -953,6 +1015,7 @@ namespace CelestialBodies.Terrain
         internal Shape Settings;
         internal readonly NoiseFilter[] NoiseFilters;
         internal MinMax ElevationMinMax;
+        internal readonly List<FlatModifier> FlatModifiers;
 
         public ShapeGenerator(Shape settings)
         {
@@ -964,6 +1027,7 @@ namespace CelestialBodies.Terrain
             }
 
             ElevationMinMax = new MinMax();
+            FlatModifiers = new List<FlatModifier>();
         }
     }
 
@@ -1046,6 +1110,13 @@ namespace CelestialBodies.Terrain
                 Min = value;
             }
         }
+    }
+    
+    struct FlatModifier
+    {
+        internal Vector3 position;
+        internal float distance;
+        internal float easeDistance;
     }
 
     [Serializable]
@@ -1256,6 +1327,7 @@ namespace CelestialBodies.Terrain
         public bool IsTerminated;
         public TerrainFace TerrainFace;
         internal int Resolution;
+        internal bool IsHighResolution;
 
         internal void TerminateThread()
         {
@@ -1270,6 +1342,7 @@ namespace CelestialBodies.Terrain
             }
             TerrainFace = terrainFace;
             Resolution = isHighResolution? terrainFace.HighResolution : terrainFace.MinResolution;
+            IsHighResolution = isHighResolution;
             SubmitedNewCalculation = true;
             return true;
         }

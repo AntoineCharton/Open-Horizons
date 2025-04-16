@@ -53,9 +53,13 @@ namespace CelestialBodies
             }
         }
 
+        public bool IsInitialized()
+        {
+            return terrain.IsInitialized();
+        }
+
         private void Update()
         {
-           
             VolumetricCloudsUrp.VolumetricCloudsPass.UpdateSettings(cloud, terrain.Surface.shape.Radius);
             terrain.SmartUpdate(transform, ref trees, _terrainDetails);
             trees.UpdateDetails(transform);
@@ -87,6 +91,11 @@ namespace CelestialBodies
             terrain.Cleanup();
             trees.CleanUp();
             terrain.SwitchToParrallelUpdate();
+        }
+
+        public Vector3 GetFirstPointAboveOcean(float offset)
+        {
+            return terrain.GetFirstPointAboveOcean(ocean, offset);
         }
 
         public void AtmosphereActive(bool isActive)
@@ -169,6 +178,16 @@ namespace CelestialBodies
             shape.NoiseSettings = noiseLayer;
             surface.shape = shape;
             terrain.Surface = surface;
+        }
+
+        public void AddFlatModifier(Vector3 position, float distance, float easeDistance)
+        {
+            terrain.AddFlatModifier(position, distance, easeDistance);
+        }
+
+        public void AddRemoveTreeModifier(Vector3 position, float distance)
+        {
+            trees.RemoveModifier(position, distance);
         }
 
         public void SetReferences(List<Reference> references)

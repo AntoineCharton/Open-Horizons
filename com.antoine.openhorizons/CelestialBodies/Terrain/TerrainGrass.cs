@@ -9,6 +9,12 @@ using Object = UnityEngine.Object;
 
 namespace CelestialBodies.Terrain
 {
+    public struct TerrainRemover
+    {
+        internal Vector3 position;
+        internal float distance;
+    }
+    
     public class TerrainGrass : MonoBehaviour, ITerrainDetails
     {
         private List<DetailMesh> _detailMeshes;
@@ -33,7 +39,8 @@ namespace CelestialBodies.Terrain
         
         [SerializeField] private GameObject aboveAltitudeReference;
         [SerializeField] private GameObject secondaryaboveAltitudeReference;
-        
+        [SerializeField] private float detailDistanceProcessing = 150;
+        private List<TerrainRemover> _terrainRemovers;
         private Vector3 _referencePosition = Vector3.one * float.MaxValue;
         private float _minAltitude;
         private float _maxAltitude;
@@ -43,6 +50,7 @@ namespace CelestialBodies.Terrain
 
         private void Awake()
         {
+            _terrainRemovers = new List<TerrainRemover>();
             _detailMeshes = new List<DetailMesh>();
         }
 
@@ -57,6 +65,14 @@ namespace CelestialBodies.Terrain
             _referencePosition = Camera.main.transform.position;
         }
 
+        public void AddTerrainRemover(Vector3 position, float distance)
+        {
+            var newRemover = new TerrainRemover();
+            newRemover.position = position;
+            newRemover.distance = distance;
+            _terrainRemovers.Add(newRemover);
+        }
+
         void Update()
         {
             if (_currentUpdatedMesh > _detailMeshes.Count - 1)
@@ -66,7 +82,7 @@ namespace CelestialBodies.Terrain
             
             if (_detailMeshes.Count > 0)
             {
-                _currentUpdateValue = _detailMeshes[_currentUpdatedMesh].UpdateMesh(transform, _referencePosition, _currentUpdateValue, _slowEnoughForDetails);
+                _currentUpdateValue = _detailMeshes[_currentUpdatedMesh].UpdateMesh(transform, _referencePosition, _currentUpdateValue, _slowEnoughForDetails, detailDistanceProcessing);
                 if (_currentUpdateValue >= 1)
                 {
                     _currentUpdatedMesh++;
@@ -135,7 +151,8 @@ namespace CelestialBodies.Terrain
                     regularReference, secondaryRegularReference,
                     stepReference, secondaryStepReference,
                     bellowAltitudeReference, secondaryBellowAltitudeReference,
-                    aboveAltitudeReference, secondaryaboveAltitudeReference);
+                    aboveAltitudeReference, secondaryaboveAltitudeReference,
+                    _terrainRemovers);
                 _detailMeshes.Add(newDetailMesh);
             }
 
@@ -201,6 +218,7 @@ namespace CelestialBodies.Terrain
         private int _addedaboveMaximumCount;
         private List<GameObject> _secondaryAboveMaximumPool;
         private int _secondaryAddedaboveMaximumCount;
+        private List<TerrainRemover> _terrainRemovers;
         private readonly Noise _noise;
 
         //Mesh Subdivision
@@ -217,7 +235,8 @@ namespace CelestialBodies.Terrain
             GameObject reference, GameObject secondaryReference,
             GameObject stepReference, GameObject secondaryStepReference,
             GameObject bellowMinimumReference, GameObject secondaryBellowMinimumReference,
-            GameObject aboveMaximumReference, GameObject secondaryAboveMaximumReference)
+            GameObject aboveMaximumReference, GameObject secondaryAboveMaximumReference,
+            List<TerrainRemover> terrainRemovers)
         {
             _noise = new Noise();
             Vertices = vertices;
@@ -248,6 +267,7 @@ namespace CelestialBodies.Terrain
             _secondaryBellowMinmumReference = secondaryBellowMinimumReference;
             _aboveMaximumReference = aboveMaximumReference;
             _secondaryAboveMaximumReference = secondaryAboveMaximumReference;
+            _terrainRemovers = terrainRemovers;
         }
 
         internal void CopyVertexColors(Color[] vertexColorToCopy)
@@ -269,7 +289,7 @@ namespace CelestialBodies.Terrain
         }
 
         private const float UpdateSteps = 0.25f;
-        internal float UpdateMesh(Transform parent, Vector3 referencePosition, float currentUpdateValue, bool generateDetails)
+        internal float UpdateMesh(Transform parent, Vector3 referencePosition, float currentUpdateValue, bool generateDetails, float detailDistanceProcessing)
         {
             if (_finishedCalculation)
             {
@@ -282,7 +302,7 @@ namespace CelestialBodies.Terrain
                 }
                 else if(generateDetails)
                 {
-                    currentUpdateValue = AddDetails(parent, referencePosition, currentUpdateValue);
+                    currentUpdateValue = AddDetails(parent, referencePosition, currentUpdateValue, detailDistanceProcessing);
                 }
 
                 if (currentUpdateValue >= 1 || generateDetails == false)
@@ -348,7 +368,7 @@ namespace CelestialBodies.Terrain
             gameObject.transform.Rotate(Vector3.up, _noise.Evaluate(position) * 360, Space.Self);
         }
 
-        float AddDetails(Transform parent, Vector3 referencePosition, float currentUpdateValue) // Ugly but works 
+        float AddDetails(Transform parent, Vector3 referencePosition, float currentUpdateValue, float detailDistanceProcessing) // Ugly but works 
         {
             if(currentUpdateValue == 0)
                 InitializeDetailPool(referencePosition);
@@ -368,35 +388,46 @@ namespace CelestialBodies.Terrain
                 position = Vector3.Lerp(position, Vertices[third],
                     (_noise.Evaluate(Vertices[first] + new Vector3(1000, 0, 0)) + 1) / 2);
 
-                if (Vector3.Distance(position + parent.position, referencePosition) < 150)
+                if (Vector3.Distance(position + parent.position, referencePosition) < detailDistanceProcessing)
                 {
-                    if (VertexColor[first].r < _stepThreshold)
+                    var isRemoved = false;
+                    for (var j = 0; j < _terrainRemovers.Count; j++)
                     {
-                        _addedPoolCount = PlaceDetailFromPool(_reference, _pool, parent, position, _addedPoolCount);
-                        _addedSecondaryPoolCount = PlaceDetailFromPool(_secondaryReference, _secondaryPool, parent,
-                            position, _addedSecondaryPoolCount, true);
+                        if (Vector3.Distance(position, _terrainRemovers[j].position) < _terrainRemovers[j].distance)
+                            isRemoved = true;
                     }
-                    else if (VertexColor[first].r != 0.99f && VertexColor[first].r != 0.98f &&
-                             VertexColor[first].r != 0.97f)
+
+                    if (!isRemoved)
                     {
-                        _addedStepPoolCount = PlaceDetailFromPool(_stepReference, _stepPool, parent, position,
-                            _addedStepPoolCount);
-                        _addedSecondaryPoolCount = PlaceDetailFromPool(_secondaryStepReference, _secondaryStepPool,
-                            parent, position, _addedSecondaryPoolCount, true);
-                    }
-                    else if (VertexColor[first].r == 0.98f)
-                    {
-                        _addedbellowMinimumCount = PlaceDetailFromPool(_bellowMinimumReference, _bellowMinimumPool,
-                            parent, position, _addedbellowMinimumCount);
-                        _secondaryAddedbellowMinimumCount = PlaceDetailFromPool(_secondaryBellowMinmumReference,
-                            _secondaryBellowMinimumPool, parent, position, _secondaryAddedbellowMinimumCount, true);
-                    }
-                    else if (VertexColor[first].r == 0.97f)
-                    {
-                        _addedaboveMaximumCount = PlaceDetailFromPool(_aboveMaximumReference, _aboveMaximumPool, parent,
-                            position, _addedaboveMaximumCount);
-                        _secondaryAddedbellowMinimumCount = PlaceDetailFromPool(_secondaryAboveMaximumReference,
-                            _secondaryAboveMaximumPool, parent, position, _secondaryAddedaboveMaximumCount, true);
+                        if (VertexColor[first].r < _stepThreshold)
+                        {
+                            _addedPoolCount = PlaceDetailFromPool(_reference, _pool, parent, position, _addedPoolCount);
+                            _addedSecondaryPoolCount = PlaceDetailFromPool(_secondaryReference, _secondaryPool, parent,
+                                position, _addedSecondaryPoolCount, true);
+                        }
+                        else if (VertexColor[first].r != 0.99f && VertexColor[first].r != 0.98f &&
+                                 VertexColor[first].r != 0.97f)
+                        {
+                            _addedStepPoolCount = PlaceDetailFromPool(_stepReference, _stepPool, parent, position,
+                                _addedStepPoolCount);
+                            _addedSecondaryPoolCount = PlaceDetailFromPool(_secondaryStepReference, _secondaryStepPool,
+                                parent, position, _addedSecondaryPoolCount, true);
+                        }
+                        else if (VertexColor[first].r == 0.98f)
+                        {
+                            _addedbellowMinimumCount = PlaceDetailFromPool(_bellowMinimumReference, _bellowMinimumPool,
+                                parent, position, _addedbellowMinimumCount);
+                            _secondaryAddedbellowMinimumCount = PlaceDetailFromPool(_secondaryBellowMinmumReference,
+                                _secondaryBellowMinimumPool, parent, position, _secondaryAddedbellowMinimumCount, true);
+                        }
+                        else if (VertexColor[first].r == 0.97f)
+                        {
+                            _addedaboveMaximumCount = PlaceDetailFromPool(_aboveMaximumReference, _aboveMaximumPool,
+                                parent,
+                                position, _addedaboveMaximumCount);
+                            _secondaryAddedbellowMinimumCount = PlaceDetailFromPool(_secondaryAboveMaximumReference,
+                                _secondaryAboveMaximumPool, parent, position, _secondaryAddedaboveMaximumCount, true);
+                        }
                     }
                 }
             }
