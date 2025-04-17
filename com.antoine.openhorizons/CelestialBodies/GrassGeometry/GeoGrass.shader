@@ -54,7 +54,7 @@ Shader "Unlit/GeoGrass" {
 			// Defines
 
 			#define SHADERPASS_FORWARD
-			#define BLADE_SEGMENTS 3
+			#define BLADE_SEGMENTS 2
 
 			// Includes
 
@@ -131,7 +131,7 @@ Shader "Unlit/GeoGrass" {
 			#pragma hull hull
 			#pragma domain domain
 
-			#define BLADE_SEGMENTS 3
+			#define BLADE_SEGMENTS 2
 			#define SHADERPASS_SHADOWCASTER
 
 			#pragma shader_feature_local _ DISTANCE_DETAIL
@@ -185,7 +185,7 @@ Shader "Unlit/GeoGrass" {
 			#pragma hull hull
 			#pragma domain domain
 
-			#define BLADE_SEGMENTS 3
+			#define BLADE_SEGMENTS 2
 			#define SHADERPASS_DEPTHONLY
 
 			#pragma shader_feature_local _ DISTANCE_DETAIL

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.Profiling;
@@ -39,7 +40,9 @@ namespace CelestialBodies.Terrain
         
         [SerializeField] private GameObject aboveAltitudeReference;
         [SerializeField] private GameObject secondaryaboveAltitudeReference;
-        [SerializeField] private float detailDistanceProcessing = 150;
+        [SerializeField] private float detailDistanceProcessing = 250;
+        
+        //[SerializeField] private 
         private List<TerrainRemover> _terrainRemovers;
         private Vector3 _referencePosition = Vector3.one * float.MaxValue;
         private float _minAltitude;
@@ -350,7 +353,7 @@ namespace CelestialBodies.Terrain
             
             for (var i = 0; i < pool.Count; i++)
             {
-                if (Vector3.Distance(referencePosition, pool[i].transform.position) > 400)
+                if (Vector3.Distance(referencePosition, pool[i].transform.position) > 350 && pool[i].transform.position.x < 100000)
                 {
                     pool[i].transform.position = Vector3.one * 250000;
                 }
@@ -465,7 +468,7 @@ namespace CelestialBodies.Terrain
                         break;
                     }
                     
-                    if (pool[currentCount].transform.position == Vector3.one * 10000)
+                    if (pool[currentCount].transform.position.x > 100000)
                     {
                         lookingForAvailableItem = false;
                     }
@@ -565,7 +568,8 @@ namespace CelestialBodies.Terrain
                     // Sort the list by distance
                     _closestTriangles.Sort((a, b) => a.distance.CompareTo(b.distance));
                     _hasAtLeastOneTriangle = false;
-                    int count = Mathf.Min(800, numberOfTrianglesDrawn);
+                    Debug.Log(numberOfTrianglesDrawn);
+                    int count = Mathf.Min(2500, numberOfTrianglesDrawn);
                     if (_trianglesIndexes == null || _trianglesIndexes.Length != count * 3)
                         _trianglesIndexes = new int[count * 3];
                     for (int j = 0; j < count; j++)
@@ -628,6 +632,9 @@ namespace CelestialBodies.Terrain
                 _mesh.colors = VertexColor;
                 _mesh.triangles = _trianglesIndexes;
                 MeshCollider.sharedMesh = _mesh;
+                _mesh = SubdivideMesh(Vertices, _trianglesIndexes, VertexColor, _mesh);
+                _mesh = SubdivideMesh(Vertices, _trianglesIndexes, VertexColor, _mesh);
+                _mesh = SubdivideMesh(Vertices, _trianglesIndexes, VertexColor, _mesh);
                 _mesh = SubdivideMesh(Vertices, _trianglesIndexes, VertexColor, _mesh);
                 MeshFilter.mesh = _mesh;
                 if (!MeshFilter.gameObject.activeInHierarchy)
