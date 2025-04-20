@@ -88,6 +88,18 @@ namespace CelestialBodies.Terrain
                 _currentUpdateValue = _detailMeshes[_currentUpdatedMesh].UpdateMesh(transform, _referencePosition, _currentUpdateValue, _slowEnoughForDetails, detailDistanceProcessing);
                 if (_currentUpdateValue >= 1)
                 {
+                    var mostTrianglesInRange = 0;
+                    var mostTrianglesIndex = 0;
+                    for (var i = 0; i < _detailMeshes.Count; i++)
+                    {
+                        _detailMeshes[i].isHighRes = false;
+                        if (_detailMeshes[i].numberOfTrianglesInRange > mostTrianglesInRange)
+                        {
+                            mostTrianglesInRange = _detailMeshes[i].numberOfTrianglesInRange;
+                            mostTrianglesIndex = i;
+                        }
+                    }
+                    _detailMeshes[mostTrianglesIndex].isHighRes = true;
                     _currentUpdatedMesh++;
                     _currentUpdateValue = -1;
                 }
@@ -185,7 +197,7 @@ namespace CelestialBodies.Terrain
         internal readonly MeshCollider MeshCollider;
         private List<(float distance, Vector3 faceCenter, int triangleIndex)> _closestTriangles;
         private int[] _trianglesIndexes;
-
+        
         private Vector3 _meshTransformPosition;
         private Quaternion _meshTransformRotation;
         private Vector3 _meshTransformScale;
@@ -223,6 +235,8 @@ namespace CelestialBodies.Terrain
         private int _secondaryAddedaboveMaximumCount;
         private List<TerrainRemover> _terrainRemovers;
         private readonly Noise _noise;
+        internal int numberOfTrianglesInRange;
+        internal bool isHighRes;
 
         //Mesh Subdivision
         private Vector3[] _newVertices;
@@ -548,7 +562,7 @@ namespace CelestialBodies.Terrain
                             }
                         }
 
-                        if (distance < 500)
+                        if (distance < 1000)
                         {
                             numberOfTrianglesDrawn++;
                         }
@@ -568,8 +582,11 @@ namespace CelestialBodies.Terrain
                     // Sort the list by distance
                     _closestTriangles.Sort((a, b) => a.distance.CompareTo(b.distance));
                     _hasAtLeastOneTriangle = false;
-                    Debug.Log(numberOfTrianglesDrawn);
-                    int count = Mathf.Min(1500, numberOfTrianglesDrawn);
+                    numberOfTrianglesInRange = numberOfTrianglesDrawn;
+                    var maxTrianglesCount = 2000;
+                    if (!isHighRes)
+                        maxTrianglesCount = 200;
+                    int count = Mathf.Min(maxTrianglesCount, numberOfTrianglesDrawn);
                     if (_trianglesIndexes == null || _trianglesIndexes.Length != count * 3)
                         _trianglesIndexes = new int[count * 3];
                     for (int j = 0; j < count; j++)
@@ -632,10 +649,14 @@ namespace CelestialBodies.Terrain
                 _mesh.colors = VertexColor;
                 _mesh.triangles = _trianglesIndexes;
                 MeshCollider.sharedMesh = _mesh;
-                _mesh = SubdivideMesh(Vertices, _trianglesIndexes, VertexColor, _mesh);
-                _mesh = SubdivideMesh(Vertices, _trianglesIndexes, VertexColor, _mesh);
-                _mesh = SubdivideMesh(Vertices, _trianglesIndexes, VertexColor, _mesh);
-                _mesh = SubdivideMesh(Vertices, _trianglesIndexes, VertexColor, _mesh);
+                _mesh = SubdivideMesh( _mesh.vertices, _mesh.triangles, _mesh.colors, _mesh);
+                _mesh = SubdivideMesh( _mesh.vertices, _mesh.triangles, _mesh.colors, _mesh);
+                //_mesh = SubdivideMesh( _mesh.vertices, _mesh.triangles, _mesh.colors, _mesh);
+                //_mesh = SubdivideMesh( _mesh.vertices, _mesh.triangles, _mesh.colors, _mesh);
+                //_mesh = SubdivideMesh( _mesh.vertices, _mesh.triangles, _mesh.colors, _mesh);
+                //_mesh = SubdivideMesh( _mesh.vertices, _mesh.triangles, _mesh.colors, _mesh);
+                //_mesh = SubdivideMesh( _mesh.vertices, _mesh.triangles, _mesh.colors, _mesh);
+                //_mesh = SubdivideMesh( _mesh.vertices, _mesh.triangles, _mesh.colors, _mesh);
                 MeshFilter.mesh = _mesh;
                 if (!MeshFilter.gameObject.activeInHierarchy)
                 {
