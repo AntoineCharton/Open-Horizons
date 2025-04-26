@@ -59,7 +59,7 @@ namespace CelestialBodies.Terrain
 
         private void FixedUpdate()
         {
-            if (Vector3.Distance(_referencePosition, Camera.main.transform.position) > 3)
+            if (Vector3.Distance(_referencePosition, Camera.main.transform.position) > 100)
                 _slowEnoughForDetails = false;
             else
             {
@@ -239,9 +239,9 @@ namespace CelestialBodies.Terrain
         internal bool isHighRes;
 
         //Mesh Subdivision
-        private Vector3[] _newVertices;
-        private int[] _newTriangles;
-        private Color[] _newColors;
+        private List<Vector3> _newVertices;
+        private List<ushort> _newTriangles;
+        private List<Color> _newColors;
         private int _currentCount;
         private static readonly int GrassSupression = Shader.PropertyToID("_GrassSupression");
         private Mesh _mesh;
@@ -306,23 +306,23 @@ namespace CelestialBodies.Terrain
         }
 
         private const float UpdateSteps = 0.25f;
-        internal float UpdateMesh(Transform parent, Vector3 referencePosition, float currentUpdateValue, bool generateDetails, float detailDistanceProcessing)
+        internal float UpdateMesh(Transform parent, Vector3 referencePosition, float detailsUpdateState, bool generateDetails, float detailDistanceProcessing)
         {
             if (_finishedCalculation)
             {
-                if (currentUpdateValue < 0f)
+                if (detailsUpdateState < 0f)
                 {
                     Profiler.BeginSample("Assign");
                     AssignTriangles();
                     Profiler.EndSample();
-                    currentUpdateValue = 0f;
+                    detailsUpdateState = 0f;
                 }
                 else if(generateDetails)
                 {
-                    currentUpdateValue = AddDetails(parent, referencePosition, currentUpdateValue, detailDistanceProcessing);
+                    detailsUpdateState = AddDetails(parent, referencePosition, detailsUpdateState, detailDistanceProcessing);
                 }
 
-                if (currentUpdateValue >= 1 || generateDetails == false)
+                if (detailsUpdateState >= 1 || generateDetails == false)
                 {
                     _finishedCalculation = false;
                     return 1;
@@ -337,10 +337,16 @@ namespace CelestialBodies.Terrain
                 return -1;
             }
 
-            return currentUpdateValue;
+            return detailsUpdateState;
+        }
+        
+        float RemapClamped(float value, float from1, float to1, float from2, float to2)
+        {
+            float t = Mathf.Clamp01((value - from1) / (to1 - from1));
+            return t * (to2 - from2) + from2;
         }
 
-        void InitializeDetailPool(Vector3 referencePosition)
+        void InitializeDetailPool(Vector3 referencePosition , float distanceProcessing)
         {
             _addedPoolCount = 0;
             _addedSecondaryPoolCount = 0;
@@ -350,24 +356,24 @@ namespace CelestialBodies.Terrain
             _secondaryAddedbellowMinimumCount = 0;
             _addedaboveMaximumCount = 0;
             _secondaryAddedaboveMaximumCount = 0;
-            _pool = InitializePool(_pool, referencePosition);
-            _secondaryPool = InitializePool(_secondaryPool, referencePosition);
-            _stepPool = InitializePool(_stepPool, referencePosition);
-            _secondaryStepPool = InitializePool(_secondaryPool, referencePosition);
-            _bellowMinimumPool = InitializePool(_bellowMinimumPool, referencePosition);
-            _secondaryBellowMinimumPool = InitializePool(_secondaryBellowMinimumPool, referencePosition);
-            _aboveMaximumPool = InitializePool(_aboveMaximumPool, referencePosition);
-            _secondaryAboveMaximumPool = InitializePool(_secondaryAboveMaximumPool, referencePosition);
+            _pool = InitializePool(_pool, referencePosition, distanceProcessing);
+            _secondaryPool = InitializePool(_secondaryPool, referencePosition, distanceProcessing);
+            _stepPool = InitializePool(_stepPool, referencePosition, distanceProcessing);
+            _secondaryStepPool = InitializePool(_secondaryPool, referencePosition, distanceProcessing);
+            _bellowMinimumPool = InitializePool(_bellowMinimumPool, referencePosition, distanceProcessing);
+            _secondaryBellowMinimumPool = InitializePool(_secondaryBellowMinimumPool, referencePosition, distanceProcessing);
+            _aboveMaximumPool = InitializePool(_aboveMaximumPool, referencePosition, distanceProcessing);
+            _secondaryAboveMaximumPool = InitializePool(_secondaryAboveMaximumPool, referencePosition, distanceProcessing);
         }
 
-        List<GameObject> InitializePool(List<GameObject> pool, Vector3 referencePosition)
+        List<GameObject> InitializePool(List<GameObject> pool, Vector3 referencePosition, float distanceProcessing)
         {
             if (pool == null)
                 pool = new List<GameObject>();
             
             for (var i = 0; i < pool.Count; i++)
             {
-                if (Vector3.Distance(referencePosition, pool[i].transform.position) > 350 && pool[i].transform.position.x < 100000)
+                if (Vector3.Distance(referencePosition, pool[i].transform.position) > distanceProcessing + 50 && pool[i].transform.position.x < 100000)
                 {
                     pool[i].transform.position = Vector3.one * 250000;
                 }
@@ -388,7 +394,7 @@ namespace CelestialBodies.Terrain
         float AddDetails(Transform parent, Vector3 referencePosition, float currentUpdateValue, float detailDistanceProcessing) // Ugly but works 
         {
             if(currentUpdateValue == 0)
-                InitializeDetailPool(referencePosition);
+                InitializeDetailPool(referencePosition, detailDistanceProcessing);
             int totalLength = _trianglesIndexes.Length;
             float frameFraction = UpdateSteps;
             int frameLength = (int)(totalLength * frameFraction);
@@ -583,9 +589,9 @@ namespace CelestialBodies.Terrain
                     _closestTriangles.Sort((a, b) => a.distance.CompareTo(b.distance));
                     _hasAtLeastOneTriangle = false;
                     numberOfTrianglesInRange = numberOfTrianglesDrawn;
-                    var maxTrianglesCount = 2000;
+                    var maxTrianglesCount = 3500;
                     if (!isHighRes)
-                        maxTrianglesCount = 200;
+                        maxTrianglesCount = 400;
                     int count = Mathf.Min(maxTrianglesCount, numberOfTrianglesDrawn);
                     if (_trianglesIndexes == null || _trianglesIndexes.Length != count * 3)
                         _trianglesIndexes = new int[count * 3];
@@ -645,23 +651,18 @@ namespace CelestialBodies.Terrain
 
             if (_hasAtLeastOneTriangle)
             {
+                Profiler.BeginSample("Profile Garbage");
                 _mesh.vertices = Vertices;
                 _mesh.colors = VertexColor;
                 _mesh.triangles = _trianglesIndexes;
                 MeshCollider.sharedMesh = _mesh;
-                _mesh = SubdivideMesh( _mesh.vertices, _mesh.triangles, _mesh.colors, _mesh);
-                _mesh = SubdivideMesh( _mesh.vertices, _mesh.triangles, _mesh.colors, _mesh);
-                //_mesh = SubdivideMesh( _mesh.vertices, _mesh.triangles, _mesh.colors, _mesh);
-                //_mesh = SubdivideMesh( _mesh.vertices, _mesh.triangles, _mesh.colors, _mesh);
-                //_mesh = SubdivideMesh( _mesh.vertices, _mesh.triangles, _mesh.colors, _mesh);
-                //_mesh = SubdivideMesh( _mesh.vertices, _mesh.triangles, _mesh.colors, _mesh);
-                //_mesh = SubdivideMesh( _mesh.vertices, _mesh.triangles, _mesh.colors, _mesh);
-                //_mesh = SubdivideMesh( _mesh.vertices, _mesh.triangles, _mesh.colors, _mesh);
-                MeshFilter.mesh = _mesh;
+                ProcessSubdivision();
+                AssignMesh();
                 if (!MeshFilter.gameObject.activeInHierarchy)
                 {
                     MeshFilter.gameObject.SetActive(true);
                 }
+                Profiler.EndSample();
             }
             else if (MeshFilter.gameObject.activeInHierarchy)
             {
@@ -669,24 +670,69 @@ namespace CelestialBodies.Terrain
             }
         }
 
+        void ProcessSubdivision()
+        {
+            for (var i = 0; i < 12; i++)
+            {
+                _mesh = SubdivideMesh(Vertices, _trianglesIndexes, VertexColor, _mesh);
+            }
+        }
+
+        void AssignMesh()
+        {
+            _mesh.RecalculateNormals();
+            _mesh.RecalculateTangents();
+            _mesh.RecalculateBounds();
+            MeshFilter.mesh = _mesh;
+        }
+        
+        
+        private List<Vector3> verticesBuilder;
+        private List<ushort> trianglesBuilder;
+        private List<Color> colorsBuilder;
+
         Mesh SubdivideMesh(Vector3[] originalVertices, int[] originalTriangles, Color[] originalColors, Mesh mesh,
             float randomise = -1f)
         {
-
+            Profiler.BeginSample("Garbage check");
             var currentVertexCount = originalVertices.Length;
             var currentTriangleCount = originalTriangles.Length;
             var hasCorrectLength = false;
 
-            List<Vector3> verticesBuilder = null;
-            List<int> trianglesBuilder = null;
-            List<Color> colorsBuilder = null;
+            if (verticesBuilder == null || trianglesBuilder == null || colorsBuilder == null)
+            {
+                Debug.Log("Initialize triangles");
+                verticesBuilder = new List<Vector3>(originalVertices);
+                trianglesBuilder = new List<ushort>();
+                for (var i = 0; i < originalTriangles.Length; i++)
+                {
+                    trianglesBuilder.Add((ushort)originalTriangles[i]);
+                }
+                colorsBuilder = new List<Color>(originalColors);
+            }
+            
+            verticesBuilder.Clear();
+            trianglesBuilder.Clear();
+            colorsBuilder.Clear();
+
+            for (var i = 0; i < originalVertices.Length; i++)
+            {
+                verticesBuilder.Add(originalVertices[i]);
+            }
+            
+            for (var i = 0; i < originalTriangles.Length; i++)
+            {
+                trianglesBuilder.Add((ushort)originalTriangles[i]);
+            }
+            
+            for (var i = 0; i < originalColors.Length; i++)
+            {
+                colorsBuilder.Add(originalColors[i]);
+            }
 
 
             if (_newVertices == null || _currentCount != originalTriangles.Length)
             {
-                verticesBuilder = new List<Vector3>(originalVertices);
-                trianglesBuilder = new List<int>(originalTriangles);
-                colorsBuilder = new List<Color>(originalColors);
                 _currentCount = originalTriangles.Length;
             }
             else
@@ -700,15 +746,15 @@ namespace CelestialBodies.Terrain
 
                 for (var i = 0; i < originalTriangles.Length; i++)
                 {
-                    _newTriangles[i] = originalTriangles[i];
+                    _newTriangles[i] = (ushort)originalTriangles[i];
                 }
             }
 
             for (int i = 0; i < originalTriangles.Length; i += 3)
             {
-                int triangle0 = originalTriangles[i + 0];
-                int triangle1 = originalTriangles[i + 1];
-                int triangle2 = originalTriangles[i + 2];
+                ushort triangle0 = (ushort)originalTriangles[i + 0];
+                ushort triangle1 = (ushort)originalTriangles[i + 1];
+                ushort triangle2 = (ushort)originalTriangles[i + 2];
 
                 Vector3 vertexA = originalVertices[triangle0];
                 Vector3 vertexB = originalVertices[triangle1];
@@ -739,7 +785,7 @@ namespace CelestialBodies.Terrain
                 Color colorCa = Color.Lerp(colorC, colorA, 0.5f);
 
                 // Add new vertices with their respective colors
-                int abIndex = currentVertexCount;
+                ushort abIndex = (ushort)currentVertexCount;
                 if (!hasCorrectLength)
                 {
                     verticesBuilder.Add(midPointAb);
@@ -753,7 +799,7 @@ namespace CelestialBodies.Terrain
 
                 currentVertexCount++;
 
-                int bcIndex = currentVertexCount;
+                ushort bcIndex = (ushort)currentVertexCount;
                 if (!hasCorrectLength)
                 {
                     verticesBuilder.Add(midPointBc);
@@ -767,7 +813,7 @@ namespace CelestialBodies.Terrain
 
                 currentVertexCount++;
 
-                int caIndex = currentVertexCount;
+                ushort caIndex = (ushort)currentVertexCount;
                 if (!hasCorrectLength)
                 {
                     verticesBuilder.Add(midPointCa);
@@ -783,7 +829,9 @@ namespace CelestialBodies.Terrain
 
                 if (!hasCorrectLength)
                 {
-                    trianglesBuilder.AddRange(new[] { triangle0, abIndex, caIndex });
+                    trianglesBuilder.Add(triangle0);
+                    trianglesBuilder.Add(abIndex);
+                    trianglesBuilder.Add(caIndex);
                 }
                 else
                 {
@@ -795,7 +843,9 @@ namespace CelestialBodies.Terrain
                 currentTriangleCount += 3;
                 if (!hasCorrectLength)
                 {
-                    trianglesBuilder.AddRange(new[] { abIndex, triangle1, bcIndex });
+                    trianglesBuilder.Add(abIndex);
+                    trianglesBuilder.Add(triangle1);
+                    trianglesBuilder.Add(bcIndex);
                 }
                 else
                 {
@@ -807,7 +857,9 @@ namespace CelestialBodies.Terrain
                 currentTriangleCount += 3;
                 if (!hasCorrectLength)
                 {
-                    trianglesBuilder.AddRange(new[] { caIndex, bcIndex, triangle2 });
+                    trianglesBuilder.Add(caIndex);
+                    trianglesBuilder.Add(bcIndex);
+                    trianglesBuilder.Add(triangle2);
                 }
                 else
                 {
@@ -819,7 +871,9 @@ namespace CelestialBodies.Terrain
                 currentTriangleCount += 3;
                 if (!hasCorrectLength)
                 {
-                    trianglesBuilder.AddRange(new[] { abIndex, bcIndex, caIndex });
+                    trianglesBuilder.Add(abIndex);
+                    trianglesBuilder.Add(bcIndex);
+                    trianglesBuilder.Add(caIndex);
                 }
                 else
                 {
@@ -836,25 +890,45 @@ namespace CelestialBodies.Terrain
                 mesh = new Mesh();
                 mesh.indexFormat = IndexFormat.UInt32;
             }
-
+            
             if (!hasCorrectLength)
             {
-                _newVertices = verticesBuilder.ToArray();
-                _newTriangles = trianglesBuilder.ToArray();
-                _newColors = colorsBuilder.ToArray();
+                if (_newVertices == null)
+                    _newVertices = new List<Vector3>();
+                _newVertices.Clear();
+                
+                for (var i = 0; i < verticesBuilder.Count; i++)
+                {
+                    _newVertices.Add(verticesBuilder[i]);
+                }
+                
+                if (_newTriangles == null)
+                    _newTriangles = new List<ushort>();
+                _newTriangles.Clear();
+
+                for (var i = 0; i < trianglesBuilder.Count; i++)
+                {
+                    _newTriangles.Add(trianglesBuilder[i]);
+                }
+                
+                
+                if (_newColors == null)
+                    _newColors = new List<Color>();
+                _newColors.Clear();
+                
+                for (var i = 0; i < colorsBuilder.Count; i++)
+                {
+                    _newColors.Add(colorsBuilder[i]);
+                }
             }
             else
             {
-                mesh.vertices = _newVertices;
-                mesh.triangles = _newTriangles;
-                mesh.colors = _newColors;
+                mesh.SetVertices(_newVertices);
+                mesh.SetIndices(_newTriangles, MeshTopology.Triangles, 0);
+                mesh.SetColors(_newColors);
             }
-
+            Profiler.EndSample();
             // Recalculate normals and other mesh properties
-            mesh.RecalculateNormals();
-            mesh.RecalculateTangents();
-            mesh.RecalculateBounds();
-
             return mesh;
         }
     }

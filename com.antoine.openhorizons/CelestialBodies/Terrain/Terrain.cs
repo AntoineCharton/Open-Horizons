@@ -481,7 +481,7 @@ namespace CelestialBodies.Terrain
             return defaultSubdivision;
         }
         
-        private static void InitializeSurface(this ref Surface surface, Transform transform)
+        private static void InitializeSurface(this ref Surface surface, Transform parent)
         {
             surface.ShapeGenerator = new ShapeGenerator(surface.shape);
             surface.ClosestFaces = new int[highDefinitionFaces];
@@ -500,16 +500,15 @@ namespace CelestialBodies.Terrain
             }
             
             surface.TerrainFaces = new TerrainFace[subdivisionCount];
-
             Vector3[] direction = { Vector3.up, Vector3.down, Vector3.left, Vector3.right, Vector3.forward, Vector3.back };
 
-            var initialPosition = transform.position;
-            var initialRotation = transform.rotation;
-            transform.position = Vector3.zero;
-            transform.rotation = Quaternion.identity;
-            surface.LazyMeshInitialization(transform);
-            transform.position = initialPosition;
-            transform.rotation = initialRotation;
+            var initialPosition = parent.position;
+            var initialRotation = parent.rotation;
+            parent.position = Vector3.zero;
+            parent.rotation = Quaternion.identity;
+            surface.LazyMeshInitialization(parent);
+            parent.position = initialPosition;
+            parent.rotation = initialRotation;
 
             for (int i = 0; i < 6; i++)
             {
@@ -527,7 +526,7 @@ namespace CelestialBodies.Terrain
             Debug.Log("Initialize");
         }
 
-        private static void LazyMeshInitialization(this Surface surface, Transform transform)
+        private static void LazyMeshInitialization(this Surface surface, Transform parent)
         {
             var subdivision = surface.subdivisions;
             if(!Application.isPlaying)
@@ -537,11 +536,12 @@ namespace CelestialBodies.Terrain
                 if (surface.meshFilters[i] == null)
                 {
                     GameObject planetObject = new GameObject("mesh");
-                    planetObject.transform.parent = transform;
+                    planetObject.transform.parent = parent;
                     surface.MeshRenderers[i] = planetObject.AddComponent<MeshRenderer>();
                     surface.meshFilters[i] = planetObject.AddComponent<MeshFilter>();
                     surface.meshFilters[i].sharedMesh = new Mesh();
                 }
+                surface.meshFilters[i].gameObject.layer = surface.layer;
             }
         }
         
@@ -916,6 +916,7 @@ namespace CelestialBodies.Terrain
         [SerializeField, Range(3, 4096)] internal int highResolution;
         [SerializeField, Range(1, 100)] internal int subdivisions;
         [SerializeField, Range(0, 1)] internal float stepThreshold;
+        [SerializeField] internal int layer;
         internal bool UpdateAsync;
         internal int CurrentSurface;
         internal ShapeGenerator ShapeGenerator;

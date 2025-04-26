@@ -81,7 +81,7 @@ namespace BigWorld
                     planet.AtmosphereActive(true);
                 }
 
-                if (distance > 80000)
+                if (distance > 100000)
                 {
                     planet.CloudsActive(false);
                 }

@@ -237,13 +237,13 @@ void geom(uint primitiveID : SV_PrimitiveID, triangle Varyings input[3], inout T
 	float3 cameraPos = _WorldSpaceCameraPos;
 	float3 positionWS = input[1].positionWS;
 	float noiseValue = snoise(positionWS);
-	positionWS = float3(positionWS.x + (noiseValue * 0.5), positionWS.y + (noiseValue * 0.5), positionWS.z + (noiseValue * 0.5));
+	positionWS = float3(positionWS.x + (noiseValue * 0.25), positionWS.y + (noiseValue * 0.25), positionWS.z + (noiseValue * 0.25));
 	
 	#ifdef DISTANCE_DETAIL
 		float3 vtcam = cameraPos - positionWS;
 		float distSqr = dot(vtcam, vtcam);
-		float bladeSegments = lerp(BLADE_SEGMENTS, 0, saturate(distSqr * 0.0005 - 0.1));
-		float bladeSegmentsFadeEnd = lerp(BLADE_SEGMENTS, 0, saturate(distSqr * 0.00001));
+		float bladeSegments = lerp(BLADE_SEGMENTS, 0, saturate(distSqr * 0.0002 - 0.1));
+		float bladeSegmentsFadeEnd = lerp(BLADE_SEGMENTS, 0, saturate(distSqr * 0.000005));
 	#else
 		int bladeSegments = BLADE_SEGMENTS;
 		int bladeSegmentsFadeEnd =  BLADE_SEGMENTS;
@@ -309,7 +309,7 @@ void geom(uint primitiveID : SV_PrimitiveID, triangle Varyings input[3], inout T
 	float width = _Width + _RandomWidth * (rand(positionWS.zyx) - 0.5);
 	float height = _Height + _RandomHeight * (rand(positionWS.yxz) - 0.5);
 	height = lerp(0 , height, fadeValue);
-	width = lerp(_Width * 6, _Width, fadeValue);
+	width = lerp(_Width * 12, _Width, fadeValue);
 	
 	// -----------------------
 	// Handle Geometry
